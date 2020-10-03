@@ -1,1 +1,3 @@
-BunnyCDN.TokenAuthentication
+# BunnyCDN.TokenAuthentication
+
+TBD.
