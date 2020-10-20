@@ -10,6 +10,10 @@ Alternatively, a compiled version is available in `build`.
 Once you've done so, import it in the class in which you require a signed URL.
 
 ### Usage
+Before usage, import the module:
+
+	import BunnyCDN.TokenSigner;
+
 For simplicity of use, the initializer object _does not do anything_. It merely provides access to the `.signUrl()` method which returns a string (URL).
 
 For example, 
