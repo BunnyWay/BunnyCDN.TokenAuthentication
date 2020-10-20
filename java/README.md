@@ -25,4 +25,4 @@ The above should return a fully assembled URL:
 
 	https://token-tester.b-cdn.net/300kb.jpg?token=D_TzYipa3d4pNEFKhLMFxMeNq7Ve_-es4H411dQIzDo&token_countries=CA&token_path=%2F&expires=1917511595
 
-A full example project can be found in the main repository (BunnyCDN.TokenAuthentication/examples).
+An example is available in "EXAMPLES/."
