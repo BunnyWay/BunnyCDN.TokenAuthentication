@@ -7,6 +7,7 @@ The PHP snipped allows you to easily sign a full URL with a single function call
 
 ### Example
 ```
+  include 'url_signing.php';
   // Single URL signing example
   echo sign_bcdn_url(
       "https://testvideo.b-cdn.net/300kb.jpg", // Url to sign
