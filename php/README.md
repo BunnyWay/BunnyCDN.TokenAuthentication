@@ -6,6 +6,7 @@ The PHP snipped allows you to easily sign a full URL with a single function call
 
 
 ### Example
+```
   // Single URL signing example
   echo sign_bcdn_url(
       "https://testvideo.b-cdn.net/300kb.jpg", // Url to sign
@@ -14,3 +15,4 @@ The PHP snipped allows you to easily sign a full URL with a single function call
       "110.168.31.2", // Place user IP here
       true, // Directory token 
       "/");
+```
