@@ -83,14 +83,3 @@ function sign_bcdn_url($url, $securityKey, $expiration_time = 3600, $user_ip = N
 		return "{$url_scheme}://{$url_host}{$url_path}?token={$token}{$parameter_data_url}&expires={$expires}";
 	}
 }
-
-
- 
-// Single URL signing example
-echo sign_bcdn_url(
-    "https://testvideo.b-cdn.net/300kb.jpg", // Url to sign
-    "50955b6d-5678-4b24-8b69-bdba5bea3102", // Token Key
-    360000, // Expiration time in seconds
-    "110.168.31.2", // Place user IP here
-    true, // Directory token 
-    "/");
