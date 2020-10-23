@@ -5,7 +5,7 @@ The PHP snipped allows you to easily sign a full URL with a single function call
 
 
 
-### Example
+### Example Usage
 ```
   include 'url_signing.php';
   // Single URL signing example
