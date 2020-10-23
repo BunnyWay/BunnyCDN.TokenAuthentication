@@ -1,7 +1,7 @@
 # BunnyCDN.TokenAuthentication
 ## Java Version
 ### Introduction
-This requires _Java 7_ to run. ~~This _may_ work with Java 8 but functionality is not guaranteed.~~ Tested to work with Java 8.
+This requires _Java 7_ or _Java 8_ to run.
 
 To begin, add `TokenSigner.java` file to your project. Make sure to include `lib` as it contains dependencies required by the library.
 
