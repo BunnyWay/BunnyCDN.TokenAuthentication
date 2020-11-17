@@ -17,7 +17,6 @@ function addCountries(url, a, b) {
 function signUrl(url, securityKey, expirationTime = 3600, userIp, isDirectory = false, pathAllowed, countriesAllowed, countriesBlocked) {
 	var parameterData = "", parameterDataUrl = "", signaturePath = "", hashableBase = "", token = "";
 	var expires = Math.floor(new Date() / 1000) + expirationTime;
-	expires = 1592088044;
 	var url = addCountries(url, countriesAllowed, countriesBlocked);
 	var parsedUrl = new URL(url);
 	var parameters = (new URL(url)).searchParams;
