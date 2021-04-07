@@ -37,7 +37,7 @@ function signUrl(url, securityKey, expirationTime = 3600, userIp, isDirectory = 
 
 		});
 	}
-	hashableBase = securityKey + signaturePath + expires + parameterData + ((userIp != null) ? userIp : "");
+	hashableBase = securityKey + signaturePath + expires + ((userIp != null) ? userIp : "") + parameterData;
 	token = Buffer.from(crypto.createHash("sha256").update(hashableBase).digest()).toString("base64");
 	token = token.replace(/\n/g, "").replace(/\+/g, "-").replace(/\//g, "_").replace(/=/g, "");
 	if (isDirectory) {
