@@ -10,10 +10,14 @@ An example:
 
 ```
 var securityKey = "229248f0-f007-4bf9-ba1f-bbf1b4ad9d40";
-var signedUrl = signUrl("https://token-tester.b-cdn.net/300kb.jpg", securityKey, 3600, "/", "", "");
+var signedUrl = signUrl("https://token-tester.b-cdn.net/path/to/images/300kb.jpg", "YOUR_TOKEN", 7200, "/path/to/images", "CA,US", "JP");
 ```
 
+The URL above will authenticate `https://token-tester.b-cdn.net/path/to/images/300kb.jpg` for a period of two hours (from the current time). It also allows for Canadian and American users, while blocking users from Japan.
+
 ### Parameters
+
+**signUrl(url, securityKey, expirationTime = 3600, userIp, isDirectory = false, pathAllowed, countriesAllowed, countriesBlocked)**
 
 ```
 url: CDN URL w/o the trailing '/' - exp. http://test.b-cdn.net/file.png
