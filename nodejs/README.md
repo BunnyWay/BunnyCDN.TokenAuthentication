@@ -17,15 +17,21 @@ The URL above will authenticate `https://token-tester.b-cdn.net/path/to/images/3
 
 ### Parameters
 
-**signUrl(url, securityKey, expirationTime = 3600, userIp, isDirectory = false, pathAllowed, countriesAllowed, countriesBlocked)**
+(String) signUrl(url, securityKey, expirationTime = 3600, userIp, isDirectory = false, pathAllowed, countriesAllowed, countriesBlocked)
 
-```
-url: CDN URL w/o the trailing '/' - exp. http://test.b-cdn.net/file.png
-securityKey: Security token found in your pull zone
-expirationTime: Authentication validity (default. 86400 sec/24 hrs)
-userIp: Optional parameter if you have the User IP feature enabled
-isDirectory: Optional parameter - "true" returns a URL separated by forward slashes (exp. (domain)/bcdn_token=...) while "false" returns a URL separated by traditional query separators (?token=...)
-pathAllowed: Directory to authenticate (exp. /path/to/images)
-countriesAllowed: List of countries allowed (exp. CA, US, TH)
-countriesBlocked: List of countries blocked (exp. CA, US, TH)
-```
+**url:** CDN URL w/o the trailing '/' - exp. http://test.b-cdn.net/file.png
+
+**securityKey:** Security token found in your pull zone
+
+**expirationTime:** Authentication validity (default. 86400 sec/24 hrs)
+
+**userIp:** Optional parameter if you have the User IP feature enabled
+
+**isDirectory:** Optional parameter - "true" returns a URL separated by forward slashes (exp. (domain)/bcdn_token=...) while "false" returns a URL separated by traditional query separators (?token=...)
+
+**pathAllowed:** Directory to authenticate (exp. /path/to/images)
+
+**countriesAllowed:** List of countries allowed (exp. CA, US, TH)
+
+**countriesBlocked:** List of countries blocked (exp. CA, US, TH)
+
