@@ -10,7 +10,7 @@ An example:
 
 ```
 var securityKey = "229248f0-f007-4bf9-ba1f-bbf1b4ad9d40";
-var signedUrl = signUrl("https://token-tester.b-cdn.net/path/to/images/300kb.jpg", "YOUR_TOKEN", 7200, "/path/to/images", "CA,US", "JP");
+var signedUrl = signUrl("https://token-tester.b-cdn.net/300kb.jpg", "YOUR_TOKEN", 7200, "/", "CA,US", "JP");
 ```
 
 The URL above will authenticate `https://token-tester.b-cdn.net/path/to/images/300kb.jpg` for a period of two hours (from the current time) + allows for Canadian and American users while blocking users from Japan. This will also default to a traditional query separated URL, i.e. "https://token-tester.b-cdn.net/path/to/images/300kb.jpg?token=...&(other paramaters)" will be returned.
@@ -19,7 +19,7 @@ If you'd like to use directory based URLs, use the following call instead. In th
 
 ```
 var securityKey = "229248f0-f007-4bf9-ba1f-bbf1b4ad9d40";
-var signedUrl = signUrl("https://token-tester.b-cdn.net/path/to/images/300kb.jpg", "YOUR_TOKEN", 7200, true, "/path/to/images", "CA,US", "JP");
+var signedUrl = signUrl("https://token-tester.b-cdn.net/300kb.jpg", "YOUR_TOKEN", 7200, true, "/", "CA,US", "JP");
 ```
 
 ### Parameters
