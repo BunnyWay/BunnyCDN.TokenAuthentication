@@ -4,7 +4,7 @@
 
 This has been tested on NodeJS versions 15 and onwards.
 
-Note: The key provided below _is valid_. Feel free to use to test; the zone currently only has one file: `/300kb.jpg`.
+Please note that the key provided below _is valid_. Feel free to use to test; the zone currently only has one file: `/300kb.jpg`.
 
 ### Usage
 
