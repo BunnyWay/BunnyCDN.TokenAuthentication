@@ -34,7 +34,7 @@ function signUrl(url, securityKey, expirationTime = 3600, userIp, isDirectory = 
 		signaturePath = pathAllowed;
 		parameters.set("token_path", signaturePath);
 	} else {
-		signaturePath = parsedUrl.pathname;
+		signaturePath = decodeURIComponent(parsedUrl.pathname);
 	}
 	parameters.sort()
 	if (Array.from(parameters).length > 0) {
