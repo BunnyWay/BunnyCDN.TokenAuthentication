@@ -30,21 +30,24 @@ function signUrl(url, securityKey, expirationTime = 3600, userIp, isDirectory = 
 	var url = addCountries(url, countriesAllowed, countriesBlocked);
 	var parsedUrl = new URL(url);
 	var parameters = (new URL(url)).searchParams;
-	if (pathAllowed != null) {
+	if (pathAllowed != "") {
 		signaturePath = pathAllowed;
 		parameters.set("token_path", signaturePath);
 	} else {
 		signaturePath = decodeURIComponent(parsedUrl.pathname);
 	}
-	parameters.sort()
+	parameters.sort();
 	if (Array.from(parameters).length > 0) {
 		parameters.forEach(function(value, key) {
-		  if (parameterData.length > 0) {
-		  	parameterData += "&";
-		  }
-		  parameterData += key + "=" + value;
-		  parameterDataUrl += "&" + key + "=" + queryString.escape(value);
-
+			if (value == "") {
+				return;
+			}
+			if (parameterData.length > 0) {
+				parameterData += "&";
+			}
+			parameterData += key + "=" + value;
+			parameterDataUrl += "&" + key + "=" + queryString.escape(value);
+			
 		});
 	}
 	hashableBase = securityKey + signaturePath + expires + ((userIp != null) ? userIp : "") + parameterData;
