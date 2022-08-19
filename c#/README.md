@@ -2,7 +2,7 @@
 # C# Version
 
 ## Introduction
-Works on .Net Framework/.net core/.net 5
+Currently built on .NET Core 3.1 (LTS). Will be moved (eventually) to .NET 6.0, when 3.1 reaches EOL.
 
 ## Usage
 An example:
