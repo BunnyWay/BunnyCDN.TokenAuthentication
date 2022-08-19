@@ -21,9 +21,20 @@ namespace BunnyCDN.TokenAuthentication
             var url = AddCountrySettings(config, new Url(config.Url));
             var signaturePath = GetSignaturePath(config, url);
 
-            var expires = config.ExpiresAt.ToUnixTimestamp(); ;
+            var expires = config.ExpiresAt.ToUnixTimestamp();
 
-            var hashableBase = $"{config.SecurityKey}{signaturePath}{expires}{config.UserIp}{url.Query}";
+            // Sort query parameters before generating base hash
+            var hashableBase = $"{config.SecurityKey}{signaturePath}{config.UserIp}{expires}";
+            var sortedParams = url.QueryParams.OrderBy(x => x.Name).ToList(); // sort & remove old items
+            url.QueryParams.Clear();
+
+            // Set sorted parameters and generate hash
+            for (int i = 0; i < sortedParams.Count; i++)
+            {
+                url.SetQueryParam(sortedParams[i].Name, sortedParams[i].Value);
+                hashableBase += (i == 0 ? "" : "&") + $"{sortedParams[i].Name}={sortedParams[i].Value}";
+            }
+
             var token = ReplaceChars(GetBase64EncodedHash(hashableBase));
 
             // Overwrite the token_path to urlencode it for the final url
