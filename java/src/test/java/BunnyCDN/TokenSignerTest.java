@@ -45,6 +45,30 @@ class TokenSignerTest {
     }
 
     @Test
+    void testWithIPv6Address() {
+        String result = TokenSigner.signUrl(
+            "https://token-tester.b-cdn.net/300kb.jpg",
+            SECURITY_KEY, 86400, "2001:0db8:85a3:0000:0000:8a2e:0370:7334", false, null, null, null, false, EXPIRES_AT
+        );
+        assertEquals(
+            "https://token-tester.b-cdn.net/300kb.jpg?token=HS256-7CEOZ-eY9DjC36ZnazCM3Ykj3-bR6h9V_IncIVT2s2U&expires=1598024587",
+            result
+        );
+    }
+
+    @Test
+    void testCombinedIPv6CountryDirectory() {
+        String result = TokenSigner.signUrl(
+            "https://token-tester.b-cdn.net/abc/",
+            SECURITY_KEY, 86400, "2001:0db8:85a3:0000:0000:8a2e:0370:7334", true, null, "CA,US", null, false, EXPIRES_AT
+        );
+        assertEquals(
+            "https://token-tester.b-cdn.net/bcdn_token=HS256-om4aK_1Gnb3m2_5WVMtLzD-vlubUyDo1mJ0FFrKU1Kk&token_countries=CA%2CUS&expires=1598024587/abc/",
+            result
+        );
+    }
+
+    @Test
     void testWithPathAllowed() {
         String result = TokenSigner.signUrl(
             "https://token-tester.b-cdn.net/abc/300kb.jpg",

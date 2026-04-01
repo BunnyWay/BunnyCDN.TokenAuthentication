@@ -33,6 +33,24 @@ describe('signUrl', () => {
             'https://token-tester.b-cdn.net/300kb.jpg?token=HS256-0A9FRzMI9ACT-5VKMPbJf7g8f7UHavqjBH1Z8HljoEk&expires=1598024587');
     });
 
+    it('with IPv6 address', () => {
+        const result = signUrl(
+            'https://token-tester.b-cdn.net/300kb.jpg',
+            SECURITY_KEY, 86400, '2001:0db8:85a3:0000:0000:8a2e:0370:7334', false, '', '', '', false, EXPIRES_AT,
+        );
+        assert.equal(result,
+            'https://token-tester.b-cdn.net/300kb.jpg?token=HS256-7CEOZ-eY9DjC36ZnazCM3Ykj3-bR6h9V_IncIVT2s2U&expires=1598024587');
+    });
+
+    it('combined IPv6, country, and directory', () => {
+        const result = signUrl(
+            'https://token-tester.b-cdn.net/abc/',
+            SECURITY_KEY, 86400, '2001:0db8:85a3:0000:0000:8a2e:0370:7334', true, '', 'CA,US', '', false, EXPIRES_AT,
+        );
+        assert.equal(result,
+            'https://token-tester.b-cdn.net/bcdn_token=HS256-om4aK_1Gnb3m2_5WVMtLzD-vlubUyDo1mJ0FFrKU1Kk&token_countries=CA%2CUS&expires=1598024587/abc/');
+    });
+
     it('with path allowed', () => {
         const result = signUrl(
             'https://token-tester.b-cdn.net/abc/300kb.jpg',

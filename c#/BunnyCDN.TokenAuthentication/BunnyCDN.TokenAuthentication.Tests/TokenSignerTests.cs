@@ -61,6 +61,54 @@ namespace BunnyCDN.TokenAuthentication.Tests
         }
 
         [Test]
+        public void WithIPv6Address()
+        {
+            var url = TokenSigner.SignUrl(t =>
+            {
+                t.Url = "https://token-tester.b-cdn.net/300kb.jpg";
+                t.SecurityKey = SecurityKey;
+                t.ExpiresAt = ExpiresAtGlobal;
+                t.UserIp = "2001:0db8:85a3:0000:0000:8a2e:0370:7334";
+            });
+
+            url.ShouldBe("https://token-tester.b-cdn.net/300kb.jpg?token=HS256-7CEOZ-eY9DjC36ZnazCM3Ykj3-bR6h9V_IncIVT2s2U&expires=1598024587");
+        }
+
+        [Test]
+        public void CombinedIPv6CountryDirectory()
+        {
+            var url = TokenSigner.SignUrl(t =>
+            {
+                t.Url = "https://token-tester.b-cdn.net/abc/";
+                t.SecurityKey = SecurityKey;
+                t.ExpiresAt = ExpiresAtGlobal;
+                t.IsDirectory = true;
+                t.UserIp = "2001:0db8:85a3:0000:0000:8a2e:0370:7334";
+                t.CountriesAllowed = new List<string> { "CA", "US" };
+            });
+
+            url.ShouldBe("https://token-tester.b-cdn.net/bcdn_token=HS256-om4aK_1Gnb3m2_5WVMtLzD-vlubUyDo1mJ0FFrKU1Kk&token_countries=CA%2CUS&expires=1598024587/abc/");
+        }
+
+        [Test]
+        public void ConvenienceOverloadWithIPv6()
+        {
+            var utcNowPlusOneHour = DateTimeOffset.UtcNow.Add(TimeSpan.FromHours(1));
+
+            var url = TokenSigner.SignUrl(t =>
+            {
+                t.Url = "https://token-tester.b-cdn.net/300kb.jpg";
+                t.SecurityKey = SecurityKey;
+                t.ExpiresAt = utcNowPlusOneHour;
+                t.UserIp = "2001:0db8:85a3:0000:0000:8a2e:0370:7334";
+            });
+
+            var urlConvenient = TokenSigner.SignUrl(SecurityKey, "https://token-tester.b-cdn.net/300kb.jpg", utcNowPlusOneHour, "2001:0db8:85a3:0000:0000:8a2e:0370:7334");
+
+            urlConvenient.ShouldBe(url);
+        }
+
+        [Test]
         public void WithPathAllowed()
         {
             var url = TokenSigner.SignUrl(t =>

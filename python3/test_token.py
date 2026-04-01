@@ -63,6 +63,33 @@ def test_with_ip_address(_mock):
 
 
 @patch("time.time", return_value=MOCK_TIME)
+def test_with_ipv6_address(_mock):
+    result = sign_url(
+        BASE_URL, SECURITY_KEY,
+        user_ip="2001:0db8:85a3:0000:0000:8a2e:0370:7334", is_directory=False,
+    )
+    assert result == (
+        "https://token-tester.b-cdn.net/300kb.jpg"
+        "?token=HS256-7CEOZ-eY9DjC36ZnazCM3Ykj3-bR6h9V_IncIVT2s2U"
+        "&expires=1598024587"
+    )
+
+
+@patch("time.time", return_value=MOCK_TIME)
+def test_combined_ipv6_country_directory(_mock):
+    result = sign_url(
+        "https://token-tester.b-cdn.net/abc/",
+        SECURITY_KEY,
+        user_ip="2001:0db8:85a3:0000:0000:8a2e:0370:7334", is_directory=True, countries_allowed="CA,US",
+    )
+    assert result == (
+        "https://token-tester.b-cdn.net/"
+        "bcdn_token=HS256-om4aK_1Gnb3m2_5WVMtLzD-vlubUyDo1mJ0FFrKU1Kk"
+        "&token_countries=CA%2CUS&expires=1598024587/abc/"
+    )
+
+
+@patch("time.time", return_value=MOCK_TIME)
 def test_with_path_allowed(_mock):
     result = sign_url(
         "https://token-tester.b-cdn.net/abc/300kb.jpg",
