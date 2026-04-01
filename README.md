@@ -41,6 +41,7 @@ Where `signingData` is the alphabetically-sorted query parameters joined as `key
 | `countriesAllowed` | Comma-separated allow-list of country codes (e.g. `CA,US`) |
 | `countriesBlocked` | Comma-separated block-list of country codes |
 | `ignoreParams` | Exclude query parameters from token validation |
+| `expiresAt` | Absolute Unix timestamp for expiration. Overrides `expirationTime` when set. In C# this is a `DateTimeOffset` property on `TokenConfig`. |
 
 ## Quick start
 

@@ -5,7 +5,7 @@ import time
 import hmac
 import hashlib
 import base64
-from typing import Dict
+from typing import Dict, Optional
 
 
 def _b64url_no_pad(raw: bytes) -> str:
@@ -47,6 +47,7 @@ def sign_url(
     countries_allowed: str = "",
     countries_blocked: str = "",
     ignore_params: bool = False,
+    expires_at: Optional[int] = None,
 ) -> str:
     """
     Generate a signed BunnyCDN URL.
@@ -56,6 +57,7 @@ def sign_url(
                            e.g. http://test.b-cdn.net/file.png
         security_key:      Token Authentication Key from your PullZone settings.
         expiration_time:   Token validity in seconds (default 86400 / 24 h).
+                           Ignored when expires_at is set.
         user_ip:           Optional - lock the token to this IP.
         is_directory:      True  → token embedded in path  (/bcdn_token=...)
                            False → token in query string   (?token=...)
@@ -63,6 +65,8 @@ def sign_url(
         countries_allowed: Comma-separated allow-list (e.g. "CA,US,TH").
         countries_blocked: Comma-separated block-list.
         ignore_params:     If True, query params are excluded from validation.
+        expires_at:        Absolute Unix timestamp for expiration. When set,
+                           overrides expiration_time.
 
     Raises:
         ValueError: On empty/missing security_key, negative expiration, or
@@ -85,7 +89,10 @@ def sign_url(
     new_query = urllib.parse.urlencode(query_params, doseq=True)
     parsed = parsed._replace(query=new_query)
 
-    expires = str(int(time.time()) + expiration_time)
+    if expires_at is not None:
+        expires = str(expires_at)
+    else:
+        expires = str(int(time.time()) + expiration_time)
 
     params = _build_parameters(
         parsed.query,

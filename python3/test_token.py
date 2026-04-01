@@ -2,7 +2,6 @@
 
 import importlib.util
 import os
-from unittest.mock import patch
 
 import pytest
 
@@ -18,16 +17,14 @@ sign_url = bunny_token.sign_url
 
 SECURITY_KEY = "SecurityKey"
 BASE_URL = "https://token-tester.b-cdn.net/300kb.jpg"
-# We want expires = 1598024587. With default expiration_time=86400,
-# time.time() must return 1598024587 - 86400 = 1597938187.
-MOCK_TIME = 1597938187
+EXPIRES_AT = 1598024587
 
 
-@patch("time.time", return_value=MOCK_TIME)
-def test_with_countries_allowed(_mock):
+def test_with_countries_allowed():
     result = sign_url(
         BASE_URL, SECURITY_KEY,
         countries_allowed="CA", path_allowed="/", is_directory=False,
+        expires_at=EXPIRES_AT,
     )
     assert result == (
         "https://token-tester.b-cdn.net/300kb.jpg"
@@ -36,11 +33,11 @@ def test_with_countries_allowed(_mock):
     )
 
 
-@patch("time.time", return_value=MOCK_TIME)
-def test_with_countries_blocked(_mock):
+def test_with_countries_blocked():
     result = sign_url(
         BASE_URL, SECURITY_KEY,
         countries_blocked="CA", is_directory=False,
+        expires_at=EXPIRES_AT,
     )
     assert result == (
         "https://token-tester.b-cdn.net/300kb.jpg"
@@ -49,11 +46,11 @@ def test_with_countries_blocked(_mock):
     )
 
 
-@patch("time.time", return_value=MOCK_TIME)
-def test_with_ip_address(_mock):
+def test_with_ip_address():
     result = sign_url(
         BASE_URL, SECURITY_KEY,
         user_ip="1.2.3.4", is_directory=False,
+        expires_at=EXPIRES_AT,
     )
     assert result == (
         "https://token-tester.b-cdn.net/300kb.jpg"
@@ -62,11 +59,11 @@ def test_with_ip_address(_mock):
     )
 
 
-@patch("time.time", return_value=MOCK_TIME)
-def test_with_ipv6_address(_mock):
+def test_with_ipv6_address():
     result = sign_url(
         BASE_URL, SECURITY_KEY,
         user_ip="2001:0db8:85a3:0000:0000:8a2e:0370:7334", is_directory=False,
+        expires_at=EXPIRES_AT,
     )
     assert result == (
         "https://token-tester.b-cdn.net/300kb.jpg"
@@ -75,12 +72,13 @@ def test_with_ipv6_address(_mock):
     )
 
 
-@patch("time.time", return_value=MOCK_TIME)
-def test_combined_ipv6_country_directory(_mock):
+def test_combined_ipv6_country_directory():
     result = sign_url(
         "https://token-tester.b-cdn.net/abc/",
         SECURITY_KEY,
-        user_ip="2001:0db8:85a3:0000:0000:8a2e:0370:7334", is_directory=True, countries_allowed="CA,US",
+        user_ip="2001:0db8:85a3:0000:0000:8a2e:0370:7334", is_directory=True,
+        countries_allowed="CA,US",
+        expires_at=EXPIRES_AT,
     )
     assert result == (
         "https://token-tester.b-cdn.net/"
@@ -89,12 +87,12 @@ def test_combined_ipv6_country_directory(_mock):
     )
 
 
-@patch("time.time", return_value=MOCK_TIME)
-def test_with_path_allowed(_mock):
+def test_with_path_allowed():
     result = sign_url(
         "https://token-tester.b-cdn.net/abc/300kb.jpg",
         SECURITY_KEY,
         path_allowed="/abc", is_directory=False,
+        expires_at=EXPIRES_AT,
     )
     assert result == (
         "https://token-tester.b-cdn.net/abc/300kb.jpg"
@@ -103,12 +101,12 @@ def test_with_path_allowed(_mock):
     )
 
 
-@patch("time.time", return_value=MOCK_TIME)
-def test_directory_allowed(_mock):
+def test_directory_allowed():
     result = sign_url(
         "https://token-tester.b-cdn.net/abc/",
         SECURITY_KEY,
         is_directory=True,
+        expires_at=EXPIRES_AT,
     )
     assert result == (
         "https://token-tester.b-cdn.net/"
@@ -117,12 +115,12 @@ def test_directory_allowed(_mock):
     )
 
 
-@patch("time.time", return_value=MOCK_TIME)
-def test_directory_and_path_allowed(_mock):
+def test_directory_and_path_allowed():
     result = sign_url(
         "https://token-tester.b-cdn.net/abc/",
         SECURITY_KEY,
         is_directory=True, path_allowed="/abc",
+        expires_at=EXPIRES_AT,
     )
     assert result == (
         "https://token-tester.b-cdn.net/"
@@ -131,12 +129,12 @@ def test_directory_and_path_allowed(_mock):
     )
 
 
-@patch("time.time", return_value=MOCK_TIME)
-def test_with_ignore_params(_mock):
+def test_with_ignore_params():
     result = sign_url(
         "https://token-tester.b-cdn.net/300kb.jpg?v=123",
         SECURITY_KEY,
         ignore_params=True, is_directory=False,
+        expires_at=EXPIRES_AT,
     )
     assert result == (
         "https://token-tester.b-cdn.net/300kb.jpg"
@@ -145,12 +143,12 @@ def test_with_ignore_params(_mock):
     )
 
 
-@patch("time.time", return_value=MOCK_TIME)
-def test_with_existing_query_params(_mock):
+def test_with_existing_query_params():
     result = sign_url(
         "https://token-tester.b-cdn.net/300kb.jpg?v=123",
         SECURITY_KEY,
         is_directory=False,
+        expires_at=EXPIRES_AT,
     )
     assert result == (
         "https://token-tester.b-cdn.net/300kb.jpg"
@@ -159,12 +157,12 @@ def test_with_existing_query_params(_mock):
     )
 
 
-@patch("time.time", return_value=MOCK_TIME)
-def test_combined_ip_country_directory(_mock):
+def test_combined_ip_country_directory():
     result = sign_url(
         "https://token-tester.b-cdn.net/abc/",
         SECURITY_KEY,
         user_ip="1.2.3.4", is_directory=True, countries_allowed="CA,US",
+        expires_at=EXPIRES_AT,
     )
     assert result == (
         "https://token-tester.b-cdn.net/"
