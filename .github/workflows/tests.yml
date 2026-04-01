@@ -21,13 +21,22 @@ jobs:
         working-directory: c#/BunnyCDN.TokenAuthentication
 
   python:
-    name: Python
-    runs-on: ubuntu-latest
+    name: Python ${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - python-version: '3.6'
+            os: ubuntu-20.04
+          - python-version: '3.9'
+            os: ubuntu-latest
+          - python-version: '3.12'
+            os: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: ${{ matrix.python-version }}
       - run: pip install pytest
       - run: python -m pytest python3/test_token.py -v
 

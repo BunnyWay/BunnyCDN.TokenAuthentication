@@ -5,6 +5,7 @@ import time
 import hmac
 import hashlib
 import base64
+from typing import Dict
 
 
 def _b64url_no_pad(raw: bytes) -> str:
@@ -17,9 +18,9 @@ def _build_parameters(
     *,
     ignore_params: bool,
     path_allowed: str,
-) -> dict[str, str]:
+) -> Dict[str, str]:
     if ignore_params:
-        params: dict[str, str] = {"token_ignore_params": "true"}
+        params: Dict[str, str] = {"token_ignore_params": "true"}
     else:
         raw = urllib.parse.parse_qs(parsed_query, keep_blank_values=True)
         params = {}
