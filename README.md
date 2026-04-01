@@ -7,7 +7,7 @@ URL token authentication for [BunnyCDN](https://bunny.net). Generates signed URL
 | Language | Source | Min version | Dependencies |
 |----------|--------|-------------|--------------|
 | [C#](c%23/) | `TokenSigner.cs` | .NET Standard 2.0 / .NET 10 | None |
-| [Python](python3/) | `token.py` | Python 3.6+ | None |
+| [Python](python3/) | `token.py` | Python 3.9+ | None |
 | [Node.js](nodejs/) | `token.js` | Node 18+ | None |
 | [PHP](php/) | `url_signing.php` | PHP 7.4+ | None |
 | [Java](java/) | `TokenSigner.java` | Java 11+ | None |

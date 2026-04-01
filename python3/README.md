@@ -2,7 +2,7 @@
 ## Python 3 Version
 ### Introduction
 
-Requires Python 3.6+. Python 2 is **NOT** supported.
+Requires Python 3.9+. Older versions (3.6–3.8) are untested. Python 2 is **NOT** supported.
 
 ### Usage
 
