@@ -48,6 +48,18 @@ Where `signingData` is the alphabetically-sorted query parameters joined as `key
 
 ## Quick start
 
+### C\#
+
+```csharp
+var url = TokenSigner.SignUrl(t =>
+{
+    t.Url = "https://example.b-cdn.net/video.mp4";
+    t.SecurityKey = "your-security-key";
+    t.ExpiresAt = DateTimeOffset.UtcNow.AddHours(1);
+    t.CountriesAllowed = new List<string> { "GB" };
+});
+```
+
 ### Python
 
 ```python
@@ -57,6 +69,7 @@ url = sign_url(
     "https://example.b-cdn.net/video.mp4",
     "your-security-key",
     expiration_time=3600,
+    is_directory=False,
     countries_allowed="GB",
 )
 ```
@@ -69,11 +82,7 @@ const { signUrl } = require('./token');
 const url = signUrl(
     'https://example.b-cdn.net/video.mp4',
     'your-security-key',
-    3600,           // expirationTime
-    '',             // userIp
-    false,          // isDirectory
-    '',             // pathAllowed
-    'GB',           // countriesAllowed
+    3600,
 );
 ```
 
@@ -85,11 +94,7 @@ require_once 'url_signing.php';
 $url = sign_bcdn_url(
     'https://example.b-cdn.net/video.mp4',
     'your-security-key',
-    3600,           // expiration_time
-    '',             // user_ip
-    false,          // is_directory
-    '',             // path_allowed
-    'GB',           // countries_allowed
+    3600,
 );
 ```
 
@@ -101,7 +106,7 @@ import BunnyCDN.TokenSigner;
 String url = TokenSigner.signUrl(
     "https://example.b-cdn.net/video.mp4",
     "your-security-key",
-    3600,           // expirationTime
+    3600,
     "",             // userIp
     false,          // isDirectory
     null,           // pathAllowed
@@ -126,6 +131,7 @@ url, err := bunnycdn.SignUrl(
     "",             // countriesBlocked
     false,          // ignoreParams
     nil,            // expiresAt
+    0,              // speedLimit
 )
 ```
 
@@ -145,19 +151,8 @@ let url = sign_url(
     "",             // countries_blocked
     false,          // ignore_params
     None,           // expires_at
+    0,              // speed_limit
 ).unwrap();
-```
-
-### C\#
-
-```csharp
-var url = TokenSigner.SignUrl(t =>
-{
-    t.Url = "https://example.b-cdn.net/video.mp4";
-    t.SecurityKey = "your-security-key";
-    t.ExpiresAt = DateTimeOffset.UtcNow.AddHours(1);
-    t.CountriesAllowed = new List<string> { "GB" };
-});
 ```
 
 ## URL formats
@@ -170,4 +165,9 @@ https://example.b-cdn.net/video.mp4?token=HS256-...&expires=1234567890
 **Directory** (`isDirectory = true`):
 ```
 https://example.b-cdn.net/bcdn_token=HS256-...&expires=1234567890/video.mp4
+```
+
+**With speed limit** (`speedLimit = 500`):
+```
+https://example.b-cdn.net/video.mp4?token=HS256-...&limit=500&expires=1234567890
 ```
