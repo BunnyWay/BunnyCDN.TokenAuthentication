@@ -1,57 +1,127 @@
-import urllib.parse, time, hashlib, base64
+"""BunnyCDN URL token authentication."""
 
-VERSION = "2"
+import urllib.parse
+import time
+import hmac
+import hashlib
+import base64
+from typing import Dict, Optional
 
-def add_countries(url, a, b):
-	"""
-		Helper to add the countries_allowed/countries_blocked
-		parameters if necessary.
 
-		a: List of countries allowed (exp. CA, US, TH)
-		b: List of countries blocked (exp. CA, US, TH)
-	"""
-	allowed, blocked = "", ""
-	if a:
-		url += {1: "?", 0: "&"}[urllib.parse.urlparse(url).query == ""] + "token_countries=" + a
-	if b:
-		url += {1: "?", 0: "&"}[urllib.parse.urlparse(url).query == ""] + "token_countries_blocked=" + b
-	return url;
+def _b64url_no_pad(raw: bytes) -> str:
+    """Base64url encode without padding."""
+    return base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
 
-def sign_url(url, security_key, expiration_time = 86400, user_ip = "", isDirectory = True, path_allowed = "", countries_allowed = "", countries_blocked = ""):
-	"""
-		Generates URL Authentication Beacon
 
-		url: CDN URL w/o the trailing '/' - exp. http://test.b-cdn.net/file.png
-		security_key: Security token found in your pull zone
-		expiration_time: Authentication validity (default. 86400 sec/24 hrs)
-		user_ip: Optional parameter if you have the User IP feature enabled
-		countries_allowed: List of countries allowed (exp. CA, US, TH)
-		countries_blocked: List of countries blocked (exp. CA, US, TH)
+def _build_parameters(
+    parsed_query: str,
+    *,
+    ignore_params: bool,
+    path_allowed: str,
+) -> Dict[str, str]:
+    if ignore_params:
+        params: Dict[str, str] = {"token_ignore_params": "true"}
+    else:
+        raw = urllib.parse.parse_qs(parsed_query, keep_blank_values=True)
+        params = {}
+        for key, values in raw.items():
+            if len(values) > 1:
+                raise ValueError(
+                    f"Multi-valued query parameter {key!r} is not supported"
+                )
+            params[key] = values[0]
 
-	"""
-	parameter_data, parameter_data_url = "", ""
-	expires = str(int(time.time() + expiration_time))
-	url = add_countries(url, countries_allowed, countries_blocked)
-	parsed_url = urllib.parse.urlparse(url)
-	parameters = urllib.parse.parse_qs(parsed_url.query)
-	if path_allowed: 
-		signature_path = path_allowed
-		parameters["token_path"] = signature_path
-	else:
-		signature_path = parsed_url.path
-	parameters = dict((a, parameters[a]) for a in sorted(parameters))
-	if parameters:
-		for value in parameters:
-			if len(parameter_data) > 0:
-				parameter_data += "&"
-			parameter_data_url += "&"
-			parameter_data += value + "=" + "".join(parameters[value])
-			parameter_data_url += value + "=" + urllib.parse.quote("".join(parameters[value]), safe="")
+    if path_allowed:
+        params["token_path"] = path_allowed
 
-	hashable_base = security_key + signature_path + expires + parameter_data + {1: user_ip, 0: ""}[user_ip != None]
-	token = base64.b64encode(hashlib.sha256(str.encode(hashable_base)).digest())
-	token = token.decode().replace("\n", "").replace("+", "-").replace("/", "_").replace("=", "")
-	if isDirectory:
-		return parsed_url.scheme + "://" + parsed_url.netloc + "/bcdn_token=" + token + parameter_data_url + "&expires=" + str(expires) + parsed_url.path
-	else:
-		return parsed_url.scheme + "://" + parsed_url.netloc + parsed_url.path + "?token=" + token + parameter_data_url + "&expires=" + str(expires)
+    return dict(sorted(params.items()))
+
+
+def sign_url(
+    url: str,
+    security_key: str,
+    expiration_time: int = 86400,
+    user_ip: str = "",
+    is_directory: bool = True,
+    path_allowed: str = "",
+    countries_allowed: str = "",
+    countries_blocked: str = "",
+    ignore_params: bool = False,
+    expires_at: Optional[int] = None,
+    speed_limit: int = 0,
+) -> str:
+    """
+    Generate a signed BunnyCDN URL.
+
+    Args:
+        url:               CDN URL without trailing '/'.
+                           e.g. http://test.b-cdn.net/file.png
+        security_key:      Token Authentication Key from your PullZone settings.
+        expiration_time:   Token validity in seconds (default 86400 / 24 h).
+                           Ignored when expires_at is set.
+        user_ip:           Optional - lock the token to this IP.
+        is_directory:      True  → token embedded in path  (/bcdn_token=...)
+                           False → token in query string   (?token=...)
+        path_allowed:      Optional path override for the signature scope.
+        countries_allowed: Comma-separated allow-list (e.g. "CA,US,TH").
+        countries_blocked: Comma-separated block-list.
+        ignore_params:     If True, query params are excluded from validation.
+        expires_at:        Absolute Unix timestamp for expiration. When set,
+                           overrides expiration_time.
+
+    Raises:
+        ValueError: On empty/missing security_key, negative expiration, or
+                    multi-valued query parameters.
+    """
+
+    if not security_key:
+        raise ValueError("security_key must not be empty")
+    if expiration_time < 0:
+        raise ValueError("expiration_time must be non-negative")
+
+    parsed = urllib.parse.urlparse(url)
+    query_params = urllib.parse.parse_qs(parsed.query, keep_blank_values=True)
+
+    if countries_allowed:
+        query_params["token_countries"] = [countries_allowed]
+    if countries_blocked:
+        query_params["token_countries_blocked"] = [countries_blocked]
+    if speed_limit > 0:
+        query_params["limit"] = [str(speed_limit)]
+
+    new_query = urllib.parse.urlencode(query_params, doseq=True)
+    parsed = parsed._replace(query=new_query)
+
+    if expires_at is not None:
+        expires = str(expires_at)
+    else:
+        expires = str(int(time.time()) + expiration_time)
+
+    params = _build_parameters(
+        parsed.query,
+        ignore_params=ignore_params,
+        path_allowed=path_allowed,
+    )
+
+    signature_path = path_allowed if path_allowed else parsed.path
+
+    signing_data = "&".join(f"{k}={v}" for k, v in params.items())
+    url_data = "&".join(
+        f"{k}={urllib.parse.quote(v, safe='')}" for k, v in params.items()
+    )
+
+    message = f"{signature_path}{expires}{signing_data}{user_ip}"
+    digest = hmac.new(
+        security_key.encode("utf-8"),
+        message.encode("utf-8"),
+        hashlib.sha256,
+    ).digest()
+    token = "HS256-" + _b64url_no_pad(digest)
+
+    base = f"{parsed.scheme}://{parsed.netloc}"
+    tail = f"&{url_data}" if url_data else ""
+
+    if is_directory:
+        return f"{base}/bcdn_token={token}{tail}&expires={expires}{parsed.path}"
+    else:
+        return f"{base}{parsed.path}?token={token}{tail}&expires={expires}"

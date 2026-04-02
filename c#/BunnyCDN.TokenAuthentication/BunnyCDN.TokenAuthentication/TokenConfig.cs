@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 
 namespace BunnyCDN.TokenAuthentication
@@ -26,7 +26,7 @@ namespace BunnyCDN.TokenAuthentication
         /// <summary>
         /// Optional parameter if you have the User IP feature enabled
         /// </summary>
-        public string UserIp { get; set; }
+        public string UserIp { get; set; } = "";
 
         /// <summary>
         /// Any request after this timestamp will be rejected
@@ -49,10 +49,14 @@ namespace BunnyCDN.TokenAuthentication
         /// </summary>
         public IEnumerable<string> CountriesBlocked { get; set; } = new List<string>();
 
+        /// <summary>
+        /// If true, query parameters are excluded from token validation.
+        /// </summary>
+        public bool IgnoreParams { get; set; }
 
+        /// <summary>
+        /// Download speed limit in kB/s. 0 means no limit.
+        /// </summary>
+        public int SpeedLimit { get; set; }
     }
-
-
-
-
 }

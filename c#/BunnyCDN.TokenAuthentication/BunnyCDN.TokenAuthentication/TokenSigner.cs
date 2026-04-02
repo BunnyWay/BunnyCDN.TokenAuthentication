@@ -1,6 +1,7 @@
-﻿using Flurl;
 using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace BunnyCDN.TokenAuthentication
@@ -18,35 +19,35 @@ namespace BunnyCDN.TokenAuthentication
             configFunc(config);
             TokenConfigValidator.EnsureValid(config);
 
-            var url = AddCountrySettings(config, new Url(config.Url));
-            var signaturePath = GetSignaturePath(config, url);
+            var uri = new Uri(config.Url);
+
+            var queryParams = ParseQueryString(uri.Query);
+
+            if (config.CountriesAllowed.Any())
+                queryParams["token_countries"] = string.Join(",", config.CountriesAllowed).ToUpperInvariant();
+            if (config.CountriesBlocked.Any())
+                queryParams["token_countries_blocked"] = string.Join(",", config.CountriesBlocked).ToUpperInvariant();
+            if (config.SpeedLimit > 0)
+                queryParams["limit"] = config.SpeedLimit.ToString();
 
             var expires = config.ExpiresAt.ToUnixTimestamp();
 
-            // Sort query parameters before generating base hash
-            var hashableBase = $"{config.SecurityKey}{signaturePath}{config.UserIp}{expires}";
-            var sortedParams = url.QueryParams.OrderBy(x => x.Name).ToList(); // sort & remove old items
-            url.QueryParams.Clear();
+            var parameters = BuildParameters(queryParams, config.IgnoreParams, config.TokenPath);
+            var signaturePath = config.HasTokenPath ? config.TokenPath : uri.AbsolutePath;
 
-            // Set sorted parameters and generate hash
-            for (int i = 0; i < sortedParams.Count; i++)
-            {
-                url.SetQueryParam(sortedParams[i].Name, sortedParams[i].Value);
-                hashableBase += (i == 0 ? "" : "&") + $"{sortedParams[i].Name}={sortedParams[i].Value}";
-            }
+            var signingData = JoinParams(parameters, encode: false);
+            var urlData = JoinParams(parameters, encode: true);
 
-            var token = ReplaceChars(GetBase64EncodedHash(hashableBase));
+            var message = string.Concat(signaturePath, expires, signingData, config.UserIp);
+            var token = "HS256-" + HmacSha256Base64Url(config.SecurityKey, message);
 
-            // Overwrite the token_path to urlencode it for the final url
-            url.SetQueryParam("token_path", config.TokenPath);
-
-            // Add expires
-            url.SetQueryParam("expires", expires);
+            var baseUrl = string.Concat(uri.Scheme, "://", uri.Authority);
+            var tail = urlData.Length > 0 ? string.Concat("&", urlData) : "";
 
             if (config.IsDirectory)
-                return url.Root + "/bcdn_token=" + token + "&" + url.Query + url.Path;
+                return string.Concat(baseUrl, "/bcdn_token=", token, tail, "&expires=", expires, uri.AbsolutePath);
             else
-                return url.Root + url.Path + "?token=" + token + "&" + url.Query;
+                return string.Concat(baseUrl, uri.AbsolutePath, "?token=", token, tail, "&expires=", expires);
         }
 
         public static string SignUrl(string securityKey, string url, DateTimeOffset expireAt)
@@ -66,46 +67,154 @@ namespace BunnyCDN.TokenAuthentication
                 t.UserIp = ipAddress;
             });
 
-        public static string SignUrl(string securityKey, string url, TimeSpan fromUTCNow, string ipAddress)
-            => SignUrl(securityKey, url, DateTimeOffset.UtcNow.Add(fromUTCNow), ipAddress);
+        public static string SignUrl(string securityKey, string url, TimeSpan fromUtcNow, string ipAddress)
+            => SignUrl(securityKey, url, DateTimeOffset.UtcNow.Add(fromUtcNow), ipAddress);
 
         public static string SignUrl(string securityKey, Uri url, DateTimeOffset expireAt, string ipAddress)
             => SignUrl(securityKey, url.ToString(), expireAt, ipAddress);
 
-
-        private static Url AddCountrySettings(TokenConfig config, Url url)
+        private static SortedDictionary<string, string> BuildParameters(
+            Dictionary<string, string> queryParams,
+            bool ignoreParams,
+            string tokenPath)
         {
-            if (config.CountriesAllowed.Any())
-                url.SetQueryParam("token_countries", string.Join(",", config.CountriesAllowed).ToUpperInvariant(), true);
+            var result = new SortedDictionary<string, string>(StringComparer.Ordinal);
 
-            if (config.CountriesBlocked.Any())
-                url.SetQueryParam("token_countries_blocked", string.Join(",", config.CountriesBlocked).ToUpperInvariant(), true);
-
-            return url;
-        }
-
-        private static string GetSignaturePath(TokenConfig config, Url url)
-        {
-            if (config.HasTokenPath)
+            if (ignoreParams)
             {
-                url.SetQueryParam("token_path", config.TokenPath, true);
-                return config.TokenPath;
+                result["token_ignore_params"] = "true";
             }
             else
-                return url.Path;
+            {
+                foreach (var kv in queryParams)
+                    result[kv.Key] = kv.Value;
+            }
+
+            if (!string.IsNullOrEmpty(tokenPath))
+                result["token_path"] = tokenPath;
+
+            return result;
         }
 
-        private static string GetBase64EncodedHash(string hashableBase)
+        private static string JoinParams(SortedDictionary<string, string> parameters, bool encode)
         {
-            var sha256 = System.Security.Cryptography.SHA256.Create();
-            var hash = sha256.ComputeHash(Encoding.UTF8.GetBytes(hashableBase));
-            return Convert.ToBase64String(hash);
+            if (parameters.Count == 0)
+                return "";
+
+            var sb = new StringBuilder();
+            var first = true;
+            foreach (var kv in parameters)
+            {
+                if (!first) sb.Append('&');
+                sb.Append(kv.Key);
+                sb.Append('=');
+                sb.Append(encode ? Uri.EscapeDataString(kv.Value) : kv.Value);
+                first = false;
+            }
+            return sb.ToString();
         }
 
-        // To properly format the token you have to then replace the following characters in the
-        // resulting Base64 string: '\n' with '', '+' with '-', '/' with '_' and '=' with ''.
-        private static string ReplaceChars(string base64String)
-            => base64String.Replace("\n", "").Replace("+", "-").Replace("/", "_").Replace("=", "");
+        private static Dictionary<string, string> ParseQueryString(string query)
+        {
+            var result = new Dictionary<string, string>(StringComparer.Ordinal);
+            if (string.IsNullOrEmpty(query))
+                return result;
 
+            // Skip leading '?'
+            var start = query[0] == '?' ? 1 : 0;
+            if (start >= query.Length)
+                return result;
+
+            var pairs = query.Substring(start).Split('&');
+            for (var i = 0; i < pairs.Length; i++)
+            {
+                var part = pairs[i];
+                if (part.Length == 0) continue;
+
+                var eqIdx = part.IndexOf('=');
+                string key, value;
+                if (eqIdx < 0)
+                {
+                    key = Uri.UnescapeDataString(part);
+                    value = "";
+                }
+                else
+                {
+                    key = Uri.UnescapeDataString(part.Substring(0, eqIdx));
+                    value = Uri.UnescapeDataString(part.Substring(eqIdx + 1));
+                }
+
+#if NET9_0_OR_GREATER
+                if (!result.TryAdd(key, value))
+                    throw new ArgumentException($"Multi-valued query parameter '{key}' is not supported");
+#else
+                if (result.ContainsKey(key))
+                    throw new ArgumentException($"Multi-valued query parameter '{key}' is not supported");
+                result[key] = value;
+#endif
+            }
+            return result;
+        }
+
+#if NET6_0_OR_GREATER
+        private static string HmacSha256Base64Url(string key, string message)
+        {
+            Span<byte> hash = stackalloc byte[32];
+
+            var keyLen = Encoding.UTF8.GetByteCount(key);
+            var msgLen = Encoding.UTF8.GetByteCount(message);
+
+            byte[] rentedKey = null, rentedMsg = null;
+            var keyBytes = keyLen <= 256
+                ? stackalloc byte[keyLen]
+                : (rentedKey = System.Buffers.ArrayPool<byte>.Shared.Rent(keyLen)).AsSpan(0, keyLen);
+            var msgBytes = msgLen <= 1024
+                ? stackalloc byte[msgLen]
+                : (rentedMsg = System.Buffers.ArrayPool<byte>.Shared.Rent(msgLen)).AsSpan(0, msgLen);
+
+            try
+            {
+                Encoding.UTF8.GetBytes(key, keyBytes);
+                Encoding.UTF8.GetBytes(message, msgBytes);
+                HMACSHA256.HashData(keyBytes, msgBytes, hash);
+            }
+            finally
+            {
+                if (rentedKey != null) System.Buffers.ArrayPool<byte>.Shared.Return(rentedKey);
+                if (rentedMsg != null) System.Buffers.ArrayPool<byte>.Shared.Return(rentedMsg);
+            }
+
+            return Base64UrlNopad(hash);
+        }
+
+        private static string Base64UrlNopad(ReadOnlySpan<byte> bytes)
+        {
+            Span<char> buf = stackalloc char[44]; // ceil(32/3)*4
+            Convert.TryToBase64Chars(bytes, buf, out var written);
+
+            while (written > 0 && buf[written - 1] == '=') written--;
+
+            for (var i = 0; i < written; i++)
+            {
+                ref var c = ref buf[i];
+                if (c == '+') c = '-';
+                else if (c == '/') c = '_';
+            }
+
+            return new string(buf.Slice(0, written));
+        }
+#else
+        private static string HmacSha256Base64Url(string key, string message)
+        {
+            using (var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(key)))
+            {
+                var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(message));
+                return Convert.ToBase64String(hash)
+                    .Replace('+', '-')
+                    .Replace('/', '_')
+                    .TrimEnd('=');
+            }
+        }
+#endif
     }
 }

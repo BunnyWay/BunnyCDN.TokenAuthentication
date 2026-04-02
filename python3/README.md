@@ -2,7 +2,7 @@
 ## Python 3 Version
 ### Introduction
 
-This has been tested on Python 3.6, 3.7 and 3.8. This should work on all Python 3 environments -- Python 2 is **NOT** supported.
+Requires Python 3.9+. Older versions (3.6–3.8) are untested. Python 2 is **NOT** supported.
 
 ### Usage
 

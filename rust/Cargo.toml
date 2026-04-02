@@ -1,0 +1,11 @@
+[package]
+name = "bunnycdn-token-authentication"
+version = "2.0.0"
+edition = "2021"
+
+[dependencies]
+hmac = "0.12"
+sha2 = "0.10"
+base64 = "0.22"
+url = "2"
+percent-encoding = "2"

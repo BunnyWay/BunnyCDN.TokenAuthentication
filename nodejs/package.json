@@ -1,0 +1,8 @@
+{
+  "name": "bunnycdn-token-authentication",
+  "version": "2.0.0",
+  "main": "token.js",
+  "scripts": {
+    "test": "node --test token.test.js"
+  }
+}
