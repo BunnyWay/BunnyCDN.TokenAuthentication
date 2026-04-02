@@ -31,6 +31,26 @@ public class TokenSigner {
     }
 
     /**
+     * Convenience overload without speedLimit.
+     */
+    public static String signUrl(
+            String url,
+            String securityKey,
+            long expirationTime,
+            String userIp,
+            boolean isDirectory,
+            String pathAllowed,
+            String countriesAllowed,
+            String countriesBlocked,
+            boolean ignoreParams,
+            Long expiresAt
+    ) {
+        return signUrl(url, securityKey, expirationTime, userIp,
+                isDirectory, pathAllowed, countriesAllowed, countriesBlocked,
+                ignoreParams, expiresAt, 0);
+    }
+
+    /**
      * Signs a BunnyCDN URL with HMAC-SHA256 token authentication.
      *
      * @param url               The URL to sign
