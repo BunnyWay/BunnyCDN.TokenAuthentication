@@ -105,6 +105,24 @@ describe('signUrl', () => {
             'https://token-tester.b-cdn.net/bcdn_token=HS256-pj8ytucbBWXT_M5cAqKGu4pshB2Q_s28G2uMfjhc3lA&token_countries=CA%2CUS&expires=1598024587/abc/');
     });
 
+    it('with speed limit', () => {
+        const result = signUrl(
+            'https://token-tester.b-cdn.net/300kb.jpg',
+            SECURITY_KEY, 86400, '', false, '', '', '', false, EXPIRES_AT, 1000,
+        );
+        assert.equal(result,
+            'https://token-tester.b-cdn.net/300kb.jpg?token=HS256-DAVapqNNED3Z7JkjRTYX0UOIHNtbHEuuhRNEc4A7mMQ&limit=1000&expires=1598024587');
+    });
+
+    it('combined speed limit, IP, and directory', () => {
+        const result = signUrl(
+            'https://token-tester.b-cdn.net/abc/',
+            SECURITY_KEY, 86400, '1.2.3.4', true, '', '', '', false, EXPIRES_AT, 5000,
+        );
+        assert.equal(result,
+            'https://token-tester.b-cdn.net/bcdn_token=HS256-9M87MQhNKZqVdjqgHo1IMFVNa01tL2DwlmjBCtou08I&limit=5000&expires=1598024587/abc/');
+    });
+
     it('throws on empty securityKey', () => {
         assert.throws(() => signUrl('https://example.com/f.jpg', ''), /securityKey/);
     });

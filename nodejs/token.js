@@ -26,6 +26,7 @@ function signUrl(
     countriesBlocked = '',
     ignoreParams = false,
     expiresAt = null,
+    speedLimit = 0,
 ) {
     if (!securityKey) {
         throw new Error('securityKey must not be empty');
@@ -52,6 +53,9 @@ function signUrl(
     }
     if (countriesBlocked) {
         queryParams['token_countries_blocked'] = countriesBlocked;
+    }
+    if (speedLimit > 0) {
+        queryParams['limit'] = String(speedLimit);
     }
 
     // 4. Compute expires

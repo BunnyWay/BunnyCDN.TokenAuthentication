@@ -75,3 +75,23 @@ jobs:
           maven-version: '3.9.9'
       - run: mvn test --batch-mode --no-transfer-progress
         working-directory: java
+
+  go:
+    name: Go
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+      - run: go test -v
+        working-directory: go
+
+  rust:
+    name: Rust
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo test --verbose
+        working-directory: rust

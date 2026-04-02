@@ -163,6 +163,34 @@ class TokenSignerTest extends TestCase
         );
     }
 
+    public function testWithSpeedLimit(): void
+    {
+        $result = sign_bcdn_url(
+            'https://token-tester.b-cdn.net/300kb.jpg',
+            self::SECURITY_KEY, 86400, '', false, '', '', '', false,
+            self::EXPIRES_AT, 1000
+        );
+
+        $this->assertSame(
+            'https://token-tester.b-cdn.net/300kb.jpg?token=HS256-DAVapqNNED3Z7JkjRTYX0UOIHNtbHEuuhRNEc4A7mMQ&limit=1000&expires=1598024587',
+            $result
+        );
+    }
+
+    public function testCombinedSpeedLimitIPDirectory(): void
+    {
+        $result = sign_bcdn_url(
+            'https://token-tester.b-cdn.net/abc/',
+            self::SECURITY_KEY, 86400, '1.2.3.4', true, '', '', '', false,
+            self::EXPIRES_AT, 5000
+        );
+
+        $this->assertSame(
+            'https://token-tester.b-cdn.net/bcdn_token=HS256-9M87MQhNKZqVdjqgHo1IMFVNa01tL2DwlmjBCtou08I&limit=5000&expires=1598024587/abc/',
+            $result
+        );
+    }
+
     public function testValidationEmptyKey(): void
     {
         $this->expectException(InvalidArgumentException::class);

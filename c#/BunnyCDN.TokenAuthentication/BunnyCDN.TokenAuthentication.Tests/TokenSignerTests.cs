@@ -213,6 +213,36 @@ namespace BunnyCDN.TokenAuthentication.Tests
         }
 
         [Test]
+        public void WithSpeedLimit()
+        {
+            var url = TokenSigner.SignUrl(t =>
+            {
+                t.Url = "https://token-tester.b-cdn.net/300kb.jpg";
+                t.SecurityKey = SecurityKey;
+                t.ExpiresAt = ExpiresAtGlobal;
+                t.SpeedLimit = 1000;
+            });
+
+            url.ShouldBe("https://token-tester.b-cdn.net/300kb.jpg?token=HS256-DAVapqNNED3Z7JkjRTYX0UOIHNtbHEuuhRNEc4A7mMQ&limit=1000&expires=1598024587");
+        }
+
+        [Test]
+        public void CombinedSpeedLimitIPDirectory()
+        {
+            var url = TokenSigner.SignUrl(t =>
+            {
+                t.Url = "https://token-tester.b-cdn.net/abc/";
+                t.SecurityKey = SecurityKey;
+                t.ExpiresAt = ExpiresAtGlobal;
+                t.IsDirectory = true;
+                t.UserIp = "1.2.3.4";
+                t.SpeedLimit = 5000;
+            });
+
+            url.ShouldBe("https://token-tester.b-cdn.net/bcdn_token=HS256-9M87MQhNKZqVdjqgHo1IMFVNa01tL2DwlmjBCtou08I&limit=5000&expires=1598024587/abc/");
+        }
+
+        [Test]
         public void ValidationEmptySecurityKey()
         {
             Should.Throw<ArgumentNullException>(() =>

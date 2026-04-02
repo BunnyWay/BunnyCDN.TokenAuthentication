@@ -11,6 +11,8 @@ URL token authentication for [BunnyCDN](https://bunny.net). Generates signed URL
 | [Node.js](nodejs/) | `token.js` | Node 18+ | None |
 | [PHP](php/) | `url_signing.php` | PHP 7.4+ | None |
 | [Java](java/) | `TokenSigner.java` | Java 11+ | None |
+| [Go](go/) | `token.go` | Go 1.21+ | None |
+| [Rust](rust/) | `src/lib.rs` | Rust 2021 edition | hmac, sha2, base64, url, percent-encoding |
 
 ## Token format
 
@@ -42,6 +44,7 @@ Where `signingData` is the alphabetically-sorted query parameters joined as `key
 | `countriesBlocked` | Comma-separated block-list of country codes |
 | `ignoreParams` | Exclude query parameters from token validation |
 | `expiresAt` | Absolute Unix timestamp for expiration. Overrides `expirationTime` when set. In C# this is a `DateTimeOffset` property on `TokenConfig`. |
+| `speedLimit` | Download speed limit in kB/s (0 = no limit). Maps to the `limit` query parameter. |
 
 ## Quick start
 
@@ -105,6 +108,44 @@ String url = TokenSigner.signUrl(
     "GB",           // countriesAllowed
     null            // countriesBlocked
 );
+```
+
+### Go
+
+```go
+import bunnycdn "bunnycdn-token-authentication"
+
+url, err := bunnycdn.SignUrl(
+    "https://example.b-cdn.net/video.mp4",
+    "your-security-key",
+    3600,           // expirationTime
+    "",             // userIp
+    false,          // isDirectory
+    "",             // pathAllowed
+    "GB",           // countriesAllowed
+    "",             // countriesBlocked
+    false,          // ignoreParams
+    nil,            // expiresAt
+)
+```
+
+### Rust
+
+```rust
+use bunnycdn_token_authentication::sign_url;
+
+let url = sign_url(
+    "https://example.b-cdn.net/video.mp4",
+    "your-security-key",
+    3600,           // expiration_time
+    "",             // user_ip
+    false,          // is_directory
+    "",             // path_allowed
+    "GB",           // countries_allowed
+    "",             // countries_blocked
+    false,          // ignore_params
+    None,           // expires_at
+).unwrap();
 ```
 
 ### C\#

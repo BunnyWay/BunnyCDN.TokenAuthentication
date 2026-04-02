@@ -27,7 +27,7 @@ public class TokenSigner {
     ) {
         return signUrl(url, securityKey, expirationTime, userIp,
                 isDirectory, pathAllowed, countriesAllowed, countriesBlocked,
-                false, null);
+                false, null, 0);
     }
 
     /**
@@ -55,7 +55,8 @@ public class TokenSigner {
             String countriesAllowed,
             String countriesBlocked,
             boolean ignoreParams,
-            Long expiresAt
+            Long expiresAt,
+            int speedLimit
     ) {
         if (securityKey == null || securityKey.isEmpty()) {
             throw new IllegalArgumentException("securityKey must not be null or empty");
@@ -97,6 +98,9 @@ public class TokenSigner {
             }
             if (countriesBlocked != null && !countriesBlocked.isEmpty()) {
                 queryParams.put("token_countries_blocked", countriesBlocked);
+            }
+            if (speedLimit > 0) {
+                queryParams.put("limit", String.valueOf(speedLimit));
             }
 
             // Step 4: Compute expires

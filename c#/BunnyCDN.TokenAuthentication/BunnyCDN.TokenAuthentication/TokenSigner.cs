@@ -27,6 +27,8 @@ namespace BunnyCDN.TokenAuthentication
                 queryParams["token_countries"] = string.Join(",", config.CountriesAllowed).ToUpperInvariant();
             if (config.CountriesBlocked.Any())
                 queryParams["token_countries_blocked"] = string.Join(",", config.CountriesBlocked).ToUpperInvariant();
+            if (config.SpeedLimit > 0)
+                queryParams["limit"] = config.SpeedLimit.ToString();
 
             var expires = config.ExpiresAt.ToUnixTimestamp();
 

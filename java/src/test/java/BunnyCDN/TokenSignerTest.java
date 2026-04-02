@@ -141,6 +141,30 @@ class TokenSignerTest {
     }
 
     @Test
+    void testWithSpeedLimit() {
+        String result = TokenSigner.signUrl(
+            "https://token-tester.b-cdn.net/300kb.jpg",
+            SECURITY_KEY, 86400, "", false, null, null, null, false, EXPIRES_AT, 1000
+        );
+        assertEquals(
+            "https://token-tester.b-cdn.net/300kb.jpg?token=HS256-DAVapqNNED3Z7JkjRTYX0UOIHNtbHEuuhRNEc4A7mMQ&limit=1000&expires=1598024587",
+            result
+        );
+    }
+
+    @Test
+    void testCombinedSpeedLimitIPDirectory() {
+        String result = TokenSigner.signUrl(
+            "https://token-tester.b-cdn.net/abc/",
+            SECURITY_KEY, 86400, "1.2.3.4", true, null, null, null, false, EXPIRES_AT, 5000
+        );
+        assertEquals(
+            "https://token-tester.b-cdn.net/bcdn_token=HS256-9M87MQhNKZqVdjqgHo1IMFVNa01tL2DwlmjBCtou08I&limit=5000&expires=1598024587/abc/",
+            result
+        );
+    }
+
+    @Test
     void testValidationEmptyKey() {
         assertThrows(IllegalArgumentException.class, () ->
             TokenSigner.signUrl("https://example.com/f.jpg", "", 86400, "", false, null, null, null)

@@ -53,5 +53,10 @@ namespace BunnyCDN.TokenAuthentication
         /// If true, query parameters are excluded from token validation.
         /// </summary>
         public bool IgnoreParams { get; set; }
+
+        /// <summary>
+        /// Download speed limit in kB/s. 0 means no limit.
+        /// </summary>
+        public int SpeedLimit { get; set; }
     }
 }

@@ -48,6 +48,7 @@ def sign_url(
     countries_blocked: str = "",
     ignore_params: bool = False,
     expires_at: Optional[int] = None,
+    speed_limit: int = 0,
 ) -> str:
     """
     Generate a signed BunnyCDN URL.
@@ -85,6 +86,8 @@ def sign_url(
         query_params["token_countries"] = [countries_allowed]
     if countries_blocked:
         query_params["token_countries_blocked"] = [countries_blocked]
+    if speed_limit > 0:
+        query_params["limit"] = [str(speed_limit)]
 
     new_query = urllib.parse.urlencode(query_params, doseq=True)
     parsed = parsed._replace(query=new_query)

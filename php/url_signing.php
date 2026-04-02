@@ -15,7 +15,8 @@ function sign_bcdn_url(
     string $countries_allowed = '',
     string $countries_blocked = '',
     bool $ignore_params = false,
-    ?int $expires_at = null
+    ?int $expires_at = null,
+    int $speed_limit = 0
 ): string {
     if ($security_key === '') {
         throw new InvalidArgumentException('security_key must not be empty');
@@ -57,6 +58,9 @@ function sign_bcdn_url(
             throw new InvalidArgumentException("Duplicate query parameter 'token_countries_blocked' is not supported");
         }
         $query_params['token_countries_blocked'] = $countries_blocked;
+    }
+    if ($speed_limit > 0) {
+        $query_params['limit'] = (string) $speed_limit;
     }
 
     // Compute expires

@@ -171,6 +171,35 @@ def test_combined_ip_country_directory():
     )
 
 
+def test_with_speed_limit():
+    result = sign_url(
+        BASE_URL, SECURITY_KEY,
+        is_directory=False,
+        expires_at=EXPIRES_AT,
+        speed_limit=1000,
+    )
+    assert result == (
+        "https://token-tester.b-cdn.net/300kb.jpg"
+        "?token=HS256-DAVapqNNED3Z7JkjRTYX0UOIHNtbHEuuhRNEc4A7mMQ"
+        "&limit=1000&expires=1598024587"
+    )
+
+
+def test_combined_speed_limit_ip_directory():
+    result = sign_url(
+        "https://token-tester.b-cdn.net/abc/",
+        SECURITY_KEY,
+        user_ip="1.2.3.4", is_directory=True,
+        expires_at=EXPIRES_AT,
+        speed_limit=5000,
+    )
+    assert result == (
+        "https://token-tester.b-cdn.net/"
+        "bcdn_token=HS256-9M87MQhNKZqVdjqgHo1IMFVNa01tL2DwlmjBCtou08I"
+        "&limit=5000&expires=1598024587/abc/"
+    )
+
+
 def test_validation_empty_key():
     with pytest.raises(ValueError, match="security_key"):
         sign_url(BASE_URL, "")
