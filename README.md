@@ -1,6 +1,6 @@
 # BunnyCDN Token Authentication
 
-URL token authentication for [BunnyCDN](https://bunny.net). Generates signed URLs that expire after a set timestamp, validated using HMAC-SHA256.
+URL token authentication for [bunny.net](https://bunny.net). Generates signed URLs that expire after a set timestamp, validated using HMAC-SHA256.
 
 ## Implementations
 
