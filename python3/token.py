@@ -1,11 +1,14 @@
 """BunnyCDN URL token authentication."""
 
+import ipaddress
 import urllib.parse
 import time
 import hmac
 import hashlib
 import base64
 from typing import Dict, Optional
+
+__version__ = "2.1.0"
 
 
 def _b64url_no_pad(raw: bytes) -> str:
@@ -59,7 +62,8 @@ def sign_url(
         security_key:      Token Authentication Key from your PullZone settings.
         expiration_time:   Token validity in seconds (default 86400 / 24 h).
                            Ignored when expires_at is set.
-        user_ip:           Optional - lock the token to this IP.
+        user_ip:           Optional - lock the token to this IP. Must be a
+                           valid IPv4 or IPv6 address when supplied.
         is_directory:      True  → token embedded in path  (/bcdn_token=...)
                            False → token in query string   (?token=...)
         path_allowed:      Optional path override for the signature scope.
@@ -70,8 +74,8 @@ def sign_url(
                            overrides expiration_time.
 
     Raises:
-        ValueError: On empty/missing security_key, negative expiration, or
-                    multi-valued query parameters.
+        ValueError: On empty/missing security_key, negative expiration,
+                    multi-valued query parameters, or unparseable user_ip.
     """
 
     if not security_key:
@@ -110,13 +114,25 @@ def sign_url(
         f"{k}={urllib.parse.quote(v, safe='')}" for k, v in params.items()
     )
 
-    message = f"{signature_path}{expires}{signing_data}{user_ip}"
+    if user_ip:
+        ip_segment = ipaddress.ip_address(user_ip).packed
+        flags_prefix = "1-"
+    else:
+        ip_segment = b""
+        flags_prefix = ""
+
+    message = (
+        signature_path.encode("utf-8")
+        + expires.encode("utf-8")
+        + signing_data.encode("utf-8")
+        + ip_segment
+    )
     digest = hmac.new(
         security_key.encode("utf-8"),
-        message.encode("utf-8"),
+        message,
         hashlib.sha256,
     ).digest()
-    token = "HS256-" + _b64url_no_pad(digest)
+    token = "HS256-" + flags_prefix + _b64url_no_pad(digest)
 
     base = f"{parsed.scheme}://{parsed.netloc}"
     tail = f"&{url_data}" if url_data else ""

@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Net;
+using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -38,8 +41,10 @@ namespace BunnyCDN.TokenAuthentication
             var signingData = JoinParams(parameters, encode: false);
             var urlData = JoinParams(parameters, encode: true);
 
-            var message = string.Concat(signaturePath, expires, signingData, config.UserIp);
-            var token = "HS256-" + HmacSha256Base64Url(config.SecurityKey, message);
+            var hasIp = !string.IsNullOrEmpty(config.UserIp);
+            var message = BuildMessageBytes(signaturePath, expires, signingData, config.UserIp, hasIp);
+            var flagsPrefix = hasIp ? "1-" : "";
+            var token = "HS256-" + flagsPrefix + HmacSha256Base64Url(config.SecurityKey, message);
 
             var baseUrl = string.Concat(uri.Scheme, "://", uri.Authority);
             var tail = urlData.Length > 0 ? string.Concat("&", urlData) : "";
@@ -72,6 +77,40 @@ namespace BunnyCDN.TokenAuthentication
 
         public static string SignUrl(string securityKey, Uri url, DateTimeOffset expireAt, string ipAddress)
             => SignUrl(securityKey, url.ToString(), expireAt, ipAddress);
+
+        private static byte[] BuildMessageBytes(
+            string signaturePath, string expires, string signingData, string userIp, bool hasIp)
+        {
+            var ms = new MemoryStream();
+            var pathBytes = Encoding.UTF8.GetBytes(signaturePath);
+            ms.Write(pathBytes, 0, pathBytes.Length);
+
+            var expiresBytes = Encoding.UTF8.GetBytes(expires);
+            ms.Write(expiresBytes, 0, expiresBytes.Length);
+
+            var signingBytes = Encoding.UTF8.GetBytes(signingData);
+            ms.Write(signingBytes, 0, signingBytes.Length);
+
+            if (hasIp)
+            {
+                var ipBytes = GetUserIpBytes(userIp);
+                ms.Write(ipBytes, 0, ipBytes.Length);
+            }
+
+            return ms.ToArray();
+        }
+
+        private static byte[] GetUserIpBytes(string userIp)
+        {
+            if (!IPAddress.TryParse(userIp, out var addr))
+                throw new ArgumentException($"UserIp '{userIp}' is not a valid IP address.", nameof(userIp));
+
+            if (addr.AddressFamily != AddressFamily.InterNetwork &&
+                addr.AddressFamily != AddressFamily.InterNetworkV6)
+                throw new ArgumentException($"UserIp '{userIp}' has unsupported address family {addr.AddressFamily}.", nameof(userIp));
+
+            return addr.GetAddressBytes();
+        }
 
         private static SortedDictionary<string, string> BuildParameters(
             Dictionary<string, string> queryParams,
@@ -157,31 +196,25 @@ namespace BunnyCDN.TokenAuthentication
         }
 
 #if NET6_0_OR_GREATER
-        private static string HmacSha256Base64Url(string key, string message)
+        private static string HmacSha256Base64Url(string key, byte[] message)
         {
             Span<byte> hash = stackalloc byte[32];
 
             var keyLen = Encoding.UTF8.GetByteCount(key);
-            var msgLen = Encoding.UTF8.GetByteCount(message);
 
-            byte[] rentedKey = null, rentedMsg = null;
+            byte[] rentedKey = null;
             var keyBytes = keyLen <= 256
                 ? stackalloc byte[keyLen]
                 : (rentedKey = System.Buffers.ArrayPool<byte>.Shared.Rent(keyLen)).AsSpan(0, keyLen);
-            var msgBytes = msgLen <= 1024
-                ? stackalloc byte[msgLen]
-                : (rentedMsg = System.Buffers.ArrayPool<byte>.Shared.Rent(msgLen)).AsSpan(0, msgLen);
 
             try
             {
                 Encoding.UTF8.GetBytes(key, keyBytes);
-                Encoding.UTF8.GetBytes(message, msgBytes);
-                HMACSHA256.HashData(keyBytes, msgBytes, hash);
+                HMACSHA256.HashData(keyBytes, message, hash);
             }
             finally
             {
                 if (rentedKey != null) System.Buffers.ArrayPool<byte>.Shared.Return(rentedKey);
-                if (rentedMsg != null) System.Buffers.ArrayPool<byte>.Shared.Return(rentedMsg);
             }
 
             return Base64UrlNopad(hash);
@@ -204,11 +237,11 @@ namespace BunnyCDN.TokenAuthentication
             return new string(buf.Slice(0, written));
         }
 #else
-        private static string HmacSha256Base64Url(string key, string message)
+        private static string HmacSha256Base64Url(string key, byte[] message)
         {
             using (var hmac = new HMACSHA256(Encoding.UTF8.GetBytes(key)))
             {
-                var hash = hmac.ComputeHash(Encoding.UTF8.GetBytes(message));
+                var hash = hmac.ComputeHash(message);
                 return Convert.ToBase64String(hash)
                     .Replace('+', '-')
                     .Replace('/', '_')

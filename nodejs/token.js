@@ -1,4 +1,79 @@
 const crypto = require('crypto');
+const net = require('net');
+
+function userIpToBytes(userIp) {
+    const family = net.isIP(userIp);
+    if (family === 4) {
+        const parts = userIp.split('.');
+        if (parts.length !== 4) {
+            throw new Error(`userIp '${userIp}' is not a valid IP address`);
+        }
+        const buf = Buffer.alloc(4);
+        for (let i = 0; i < 4; i++) {
+            const n = Number(parts[i]);
+            if (!Number.isInteger(n) || n < 0 || n > 255) {
+                throw new Error(`userIp '${userIp}' is not a valid IP address`);
+            }
+            buf[i] = n;
+        }
+        return buf;
+    }
+    if (family === 6) {
+        return parseIpv6(userIp);
+    }
+    throw new Error(`userIp '${userIp}' is not a valid IP address`);
+}
+
+function parseIpv6(str) {
+    let trailingV4 = null;
+    const lastColon = str.lastIndexOf(':');
+    if (lastColon !== -1 && str.indexOf('.') > lastColon) {
+        const tail = str.slice(lastColon + 1);
+        if (net.isIP(tail) !== 4) {
+            throw new Error(`userIp '${str}' is not a valid IP address`);
+        }
+        trailingV4 = tail.split('.').map(Number);
+        str = str.slice(0, lastColon) + ':0:0';
+    }
+
+    const halves = str.split('::');
+    if (halves.length > 2) {
+        throw new Error(`userIp '${str}' is not a valid IP address`);
+    }
+
+    const left = halves[0] === '' ? [] : halves[0].split(':');
+    const right = halves.length === 2 && halves[1] !== '' ? halves[1].split(':') : [];
+    const totalGiven = left.length + right.length;
+
+    if (halves.length === 1 && totalGiven !== 8) {
+        throw new Error(`userIp '${str}' is not a valid IP address`);
+    }
+    if (halves.length === 2 && totalGiven > 7) {
+        throw new Error(`userIp '${str}' is not a valid IP address`);
+    }
+
+    const fillCount = halves.length === 2 ? 8 - totalGiven : 0;
+    const hextets = [...left, ...Array(fillCount).fill('0'), ...right];
+    if (hextets.length !== 8) {
+        throw new Error(`userIp '${str}' is not a valid IP address`);
+    }
+
+    const buf = Buffer.alloc(16);
+    for (let i = 0; i < 8; i++) {
+        const h = hextets[i];
+        if (!/^[0-9A-Fa-f]{1,4}$/.test(h)) {
+            throw new Error(`userIp '${str}' is not a valid IP address`);
+        }
+        const n = parseInt(h, 16);
+        buf[i * 2] = (n >>> 8) & 0xff;
+        buf[i * 2 + 1] = n & 0xff;
+    }
+
+    if (trailingV4) {
+        for (let i = 0; i < 4; i++) buf[12 + i] = trailingV4[i];
+    }
+    return buf;
+}
 
 /**
  * Generate a signed BunnyCDN URL.
@@ -85,14 +160,20 @@ function signUrl(
     // 8. urlData (encoded values)
     const urlData = sortedEntries.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
 
-    // 9. message
-    const message = `${signaturePath}${expires}${signingData}${userIp}`;
+    // 9. HMAC-SHA256
+    const hasIp = !!userIp;
+    const ipBytes = hasIp ? userIpToBytes(userIp) : Buffer.alloc(0);
+    const flagsPrefix = hasIp ? '1-' : '';
 
-    // 10. HMAC-SHA256
-    const digest = crypto.createHmac('sha256', securityKey).update(message).digest();
+    const hmac = crypto.createHmac('sha256', securityKey);
+    hmac.update(signaturePath);
+    hmac.update(expires);
+    hmac.update(signingData);
+    hmac.update(ipBytes);
+    const digest = hmac.digest();
 
-    // 11. token
-    const token = 'HS256-' + digest.toString('base64')
+    // 10. token
+    const token = 'HS256-' + flagsPrefix + digest.toString('base64')
         .replace(/\+/g, '-')
         .replace(/\//g, '_')
         .replace(/=+$/, '');

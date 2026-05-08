@@ -1,3 +1,4 @@
+// Package bunnycdn implements BunnyCDN URL token authentication.
 package bunnycdn
 
 import (
@@ -6,11 +7,15 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"net"
 	"net/url"
 	"sort"
 	"strings"
 	"time"
 )
+
+// Version is the SDK release version.
+const Version = "2.1.0"
 
 // SignUrl generates a signed BunnyCDN URL using HMAC-SHA256 token authentication.
 //
@@ -136,11 +141,22 @@ func SignUrl(
 	signingData := strings.Join(signingParts, "&")
 	urlData := strings.Join(urlParts, "&")
 
-	// HMAC-SHA256.
-	message := signaturePath + expires + signingData + userIp
+	flagsPrefix := ""
+	var ipBytes []byte
+	if userIp != "" {
+		ipBytes, err = userIpBytes(userIp)
+		if err != nil {
+			return "", err
+		}
+		flagsPrefix = "1-"
+	}
+
 	mac := hmac.New(sha256.New, []byte(securityKey))
-	mac.Write([]byte(message))
-	token := "HS256-" + base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
+	mac.Write([]byte(signaturePath))
+	mac.Write([]byte(expires))
+	mac.Write([]byte(signingData))
+	mac.Write(ipBytes)
+	token := "HS256-" + flagsPrefix + base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
 
 	// Build final URL.
 	base := parsed.Scheme + "://" + parsed.Host
@@ -157,4 +173,17 @@ func SignUrl(
 
 func percentEncode(s string) string {
 	return strings.ReplaceAll(url.QueryEscape(s), "+", "%20")
+}
+
+func userIpBytes(userIp string) ([]byte, error) {
+	ip := net.ParseIP(userIp)
+	if ip == nil {
+		return nil, fmt.Errorf("userIp %q is not a valid IP address", userIp)
+	}
+	// net.ParseIP returns a 16-byte IPv4-mapped slice for "1.2.3.4"; the
+	// 4-byte form is what callers expect.
+	if v4 := ip.To4(); v4 != nil {
+		return v4, nil
+	}
+	return ip.To16(), nil
 }

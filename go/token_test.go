@@ -1,6 +1,9 @@
 package bunnycdn
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 const securityKey = "SecurityKey"
 
@@ -42,7 +45,7 @@ func TestWithIPAddress(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expected := "https://token-tester.b-cdn.net/300kb.jpg?token=HS256-0A9FRzMI9ACT-5VKMPbJf7g8f7UHavqjBH1Z8HljoEk&expires=1598024587"
+	expected := "https://token-tester.b-cdn.net/300kb.jpg?token=HS256-1-L2rISTLcujMY9UFf2tbZ41d5i-Bme1g1oTK_Z2QMLJk&expires=1598024587"
 	if result != expected {
 		t.Errorf("got %s, want %s", result, expected)
 	}
@@ -56,9 +59,29 @@ func TestWithIPv6Address(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expected := "https://token-tester.b-cdn.net/300kb.jpg?token=HS256-7CEOZ-eY9DjC36ZnazCM3Ykj3-bR6h9V_IncIVT2s2U&expires=1598024587"
+	expected := "https://token-tester.b-cdn.net/300kb.jpg?token=HS256-1-1avZgnR84EtR3eNPVtiOT8RtI9UqcvijgXVU88vxZ60&expires=1598024587"
 	if result != expected {
 		t.Errorf("got %s, want %s", result, expected)
+	}
+}
+
+func TestIPv6CompressedFormMatchesExpanded(t *testing.T) {
+	expanded, err := SignUrl(
+		"https://token-tester.b-cdn.net/300kb.jpg",
+		securityKey, 86400, "2001:0db8:85a3:0000:0000:8a2e:0370:7334", false, "", "", "", false, &expiresAt, 0,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	compressed, err := SignUrl(
+		"https://token-tester.b-cdn.net/300kb.jpg",
+		securityKey, 86400, "2001:db8:85a3::8a2e:370:7334", false, "", "", "", false, &expiresAt, 0,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if compressed != expanded {
+		t.Errorf("compressed %s != expanded %s", compressed, expanded)
 	}
 }
 
@@ -70,7 +93,7 @@ func TestCombinedIPv6CountryDirectory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expected := "https://token-tester.b-cdn.net/bcdn_token=HS256-om4aK_1Gnb3m2_5WVMtLzD-vlubUyDo1mJ0FFrKU1Kk&token_countries=CA%2CUS&expires=1598024587/abc/"
+	expected := "https://token-tester.b-cdn.net/bcdn_token=HS256-1-TrSbI6dVaWEq8s7tuydKyhJSo9oKHA64KBhb2SgNv0E&token_countries=CA%2CUS&expires=1598024587/abc/"
 	if result != expected {
 		t.Errorf("got %s, want %s", result, expected)
 	}
@@ -154,7 +177,7 @@ func TestCombinedIPCountryDirectory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expected := "https://token-tester.b-cdn.net/bcdn_token=HS256-pj8ytucbBWXT_M5cAqKGu4pshB2Q_s28G2uMfjhc3lA&token_countries=CA%2CUS&expires=1598024587/abc/"
+	expected := "https://token-tester.b-cdn.net/bcdn_token=HS256-1-eZuSzuE7KvWxa-lfmEG6eVOp4OmuPlFyzD6acZT8j_o&token_countries=CA%2CUS&expires=1598024587/abc/"
 	if result != expected {
 		t.Errorf("got %s, want %s", result, expected)
 	}
@@ -182,7 +205,7 @@ func TestCombinedSpeedLimitIPDirectory(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	expected := "https://token-tester.b-cdn.net/bcdn_token=HS256-9M87MQhNKZqVdjqgHo1IMFVNa01tL2DwlmjBCtou08I&limit=5000&expires=1598024587/abc/"
+	expected := "https://token-tester.b-cdn.net/bcdn_token=HS256-1-NasywRGZDPxXIxBgQ2iyxSP3EWxxok3bzpYhWgaU8BQ&limit=5000&expires=1598024587/abc/"
 	if result != expected {
 		t.Errorf("got %s, want %s", result, expected)
 	}
@@ -199,5 +222,28 @@ func TestValidationNegativeExpiry(t *testing.T) {
 	_, err := SignUrl("https://example.com/f.jpg", "key", -1, "", false, "", "", "", false, nil, 0)
 	if err == nil {
 		t.Error("expected error for negative expiration time")
+	}
+}
+
+func TestNoUserIpOmitsFlagPrefix(t *testing.T) {
+	result, err := SignUrl(
+		"https://token-tester.b-cdn.net/300kb.jpg",
+		securityKey, 86400, "", false, "", "", "", false, &expiresAt, 0,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(result, "HS256-1-") {
+		t.Errorf("expected no HS256-1- flag prefix when userIp is empty, got %s", result)
+	}
+}
+
+func TestInvalidIpReturnsError(t *testing.T) {
+	_, err := SignUrl(
+		"https://token-tester.b-cdn.net/300kb.jpg",
+		securityKey, 86400, "not-an-ip", false, "", "", "", false, &expiresAt, 0,
+	)
+	if err == nil {
+		t.Error("expected error for invalid userIp")
 	}
 }

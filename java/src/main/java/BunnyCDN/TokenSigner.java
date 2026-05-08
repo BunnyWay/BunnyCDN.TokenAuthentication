@@ -2,13 +2,18 @@ package BunnyCDN;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.net.InetAddress;
 import java.net.URI;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
+import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.regex.Pattern;
 
 public class TokenSigner {
 
@@ -170,18 +175,24 @@ public class TokenSigner {
                 urlData.append(entry.getKey()).append('=').append(encodedValue);
             }
 
-            // Step 9: message
-            String message = signaturePath + expires + signingData + userIp;
+            // Step 9: HMAC-SHA256
+            boolean hasIp = userIp != null && !userIp.isEmpty();
+            byte[] ipBytes = hasIp ? userIpToBytes(userIp) : new byte[0];
+            String flagsPrefix = hasIp ? "1-" : "";
 
-            // Step 10: HMAC-SHA256
             Mac mac = Mac.getInstance("HmacSHA256");
             SecretKeySpec keySpec = new SecretKeySpec(
                     securityKey.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
             mac.init(keySpec);
-            byte[] digest = mac.doFinal(message.getBytes(StandardCharsets.UTF_8));
+            mac.update(signaturePath.getBytes(StandardCharsets.UTF_8));
+            mac.update(expires.getBytes(StandardCharsets.UTF_8));
+            mac.update(signingData.toString().getBytes(StandardCharsets.UTF_8));
+            mac.update(ipBytes);
+            byte[] digest = mac.doFinal();
 
-            // Step 11: token
-            String token = "HS256-" + Base64.getUrlEncoder().withoutPadding().encodeToString(digest);
+            // Step 10: token
+            String token = "HS256-" + flagsPrefix
+                    + Base64.getUrlEncoder().withoutPadding().encodeToString(digest);
 
             // Step 12: Build final URL
             String base = uri.getScheme() + "://" + uri.getHost();
@@ -198,6 +209,25 @@ public class TokenSigner {
             throw e;
         } catch (Exception e) {
             throw new RuntimeException("Failed to sign URL", e);
+        }
+    }
+
+    private static final Pattern IPV4_LITERAL = Pattern.compile("^[0-9.]+$");
+    private static final Pattern IPV6_LITERAL = Pattern.compile("^[0-9A-Fa-f:.]+$");
+
+    private static byte[] userIpToBytes(String userIp) {
+        if (userIp == null || userIp.isEmpty()) {
+            throw new IllegalArgumentException("userIp must not be empty");
+        }
+        boolean looksLikeIp = IPV4_LITERAL.matcher(userIp).matches()
+                || (userIp.indexOf(':') >= 0 && IPV6_LITERAL.matcher(userIp).matches());
+        if (!looksLikeIp) {
+            throw new IllegalArgumentException("userIp '" + userIp + "' is not a valid IP address");
+        }
+        try {
+            return InetAddress.getByName(userIp).getAddress();
+        } catch (UnknownHostException e) {
+            throw new IllegalArgumentException("userIp '" + userIp + "' is not a valid IP address", e);
         }
     }
 }

@@ -54,7 +54,7 @@ def test_with_ip_address():
     )
     assert result == (
         "https://token-tester.b-cdn.net/300kb.jpg"
-        "?token=HS256-0A9FRzMI9ACT-5VKMPbJf7g8f7UHavqjBH1Z8HljoEk"
+        "?token=HS256-1-L2rISTLcujMY9UFf2tbZ41d5i-Bme1g1oTK_Z2QMLJk"
         "&expires=1598024587"
     )
 
@@ -67,9 +67,23 @@ def test_with_ipv6_address():
     )
     assert result == (
         "https://token-tester.b-cdn.net/300kb.jpg"
-        "?token=HS256-7CEOZ-eY9DjC36ZnazCM3Ykj3-bR6h9V_IncIVT2s2U"
+        "?token=HS256-1-1avZgnR84EtR3eNPVtiOT8RtI9UqcvijgXVU88vxZ60"
         "&expires=1598024587"
     )
+
+
+def test_ipv6_compressed_form_matches_expanded():
+    expanded = sign_url(
+        BASE_URL, SECURITY_KEY,
+        user_ip="2001:0db8:85a3:0000:0000:8a2e:0370:7334", is_directory=False,
+        expires_at=EXPIRES_AT,
+    )
+    compressed = sign_url(
+        BASE_URL, SECURITY_KEY,
+        user_ip="2001:db8:85a3::8a2e:370:7334", is_directory=False,
+        expires_at=EXPIRES_AT,
+    )
+    assert compressed == expanded
 
 
 def test_combined_ipv6_country_directory():
@@ -82,7 +96,7 @@ def test_combined_ipv6_country_directory():
     )
     assert result == (
         "https://token-tester.b-cdn.net/"
-        "bcdn_token=HS256-om4aK_1Gnb3m2_5WVMtLzD-vlubUyDo1mJ0FFrKU1Kk"
+        "bcdn_token=HS256-1-TrSbI6dVaWEq8s7tuydKyhJSo9oKHA64KBhb2SgNv0E"
         "&token_countries=CA%2CUS&expires=1598024587/abc/"
     )
 
@@ -166,7 +180,7 @@ def test_combined_ip_country_directory():
     )
     assert result == (
         "https://token-tester.b-cdn.net/"
-        "bcdn_token=HS256-pj8ytucbBWXT_M5cAqKGu4pshB2Q_s28G2uMfjhc3lA"
+        "bcdn_token=HS256-1-eZuSzuE7KvWxa-lfmEG6eVOp4OmuPlFyzD6acZT8j_o"
         "&token_countries=CA%2CUS&expires=1598024587/abc/"
     )
 
@@ -195,7 +209,7 @@ def test_combined_speed_limit_ip_directory():
     )
     assert result == (
         "https://token-tester.b-cdn.net/"
-        "bcdn_token=HS256-9M87MQhNKZqVdjqgHo1IMFVNa01tL2DwlmjBCtou08I"
+        "bcdn_token=HS256-1-NasywRGZDPxXIxBgQ2iyxSP3EWxxok3bzpYhWgaU8BQ"
         "&limit=5000&expires=1598024587/abc/"
     )
 
@@ -208,3 +222,22 @@ def test_validation_empty_key():
 def test_validation_negative_expiry():
     with pytest.raises(ValueError, match="expiration_time"):
         sign_url(BASE_URL, SECURITY_KEY, expiration_time=-1)
+
+
+def test_no_user_ip_omits_flag_prefix():
+    result = sign_url(
+        BASE_URL, SECURITY_KEY,
+        is_directory=False,
+        expires_at=EXPIRES_AT,
+    )
+    assert "HS256-1-" not in result
+
+
+def test_invalid_ip_raises():
+    with pytest.raises(ValueError):
+        sign_url(
+            BASE_URL, SECURITY_KEY,
+            user_ip="not-an-ip",
+            is_directory=False,
+            expires_at=EXPIRES_AT,
+        )

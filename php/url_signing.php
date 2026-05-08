@@ -93,11 +93,15 @@ function sign_bcdn_url(
     $url_data = implode('&', $url_parts);
 
     // Build message and compute HMAC-SHA256
-    $message = $signature_path . $expires . $signing_data . $user_ip;
+    $has_ip = $user_ip !== '';
+    $ip_bytes = $has_ip ? user_ip_to_bytes($user_ip) : '';
+    $flags_prefix = $has_ip ? '1-' : '';
+
+    $message = $signature_path . $expires . $signing_data . $ip_bytes;
     $digest = hash_hmac('sha256', $message, $security_key, true);
 
     // Build token
-    $token = 'HS256-' . rtrim(strtr(base64_encode($digest), '+/', '-_'), '=');
+    $token = 'HS256-' . $flags_prefix . rtrim(strtr(base64_encode($digest), '+/', '-_'), '=');
 
     // Build final URL
     $base = "{$url_scheme}://{$url_host}";
@@ -108,4 +112,13 @@ function sign_bcdn_url(
     } else {
         return "{$base}{$url_path}?token={$token}{$tail}&expires={$expires}";
     }
+}
+
+function user_ip_to_bytes(string $user_ip): string
+{
+    $bytes = @inet_pton($user_ip);
+    if ($bytes === false) {
+        throw new InvalidArgumentException("user_ip '{$user_ip}' is not a valid IP address");
+    }
+    return $bytes;
 }

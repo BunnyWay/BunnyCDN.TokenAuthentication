@@ -46,7 +46,7 @@ class TokenSignerTest extends TestCase
         );
 
         $this->assertSame(
-            'https://token-tester.b-cdn.net/300kb.jpg?token=HS256-0A9FRzMI9ACT-5VKMPbJf7g8f7UHavqjBH1Z8HljoEk&expires=1598024587',
+            'https://token-tester.b-cdn.net/300kb.jpg?token=HS256-1-L2rISTLcujMY9UFf2tbZ41d5i-Bme1g1oTK_Z2QMLJk&expires=1598024587',
             $result
         );
     }
@@ -60,9 +60,24 @@ class TokenSignerTest extends TestCase
         );
 
         $this->assertSame(
-            'https://token-tester.b-cdn.net/300kb.jpg?token=HS256-7CEOZ-eY9DjC36ZnazCM3Ykj3-bR6h9V_IncIVT2s2U&expires=1598024587',
+            'https://token-tester.b-cdn.net/300kb.jpg?token=HS256-1-1avZgnR84EtR3eNPVtiOT8RtI9UqcvijgXVU88vxZ60&expires=1598024587',
             $result
         );
+    }
+
+    public function testIPv6CompressedFormMatchesExpanded(): void
+    {
+        $expanded = sign_bcdn_url(
+            'https://token-tester.b-cdn.net/300kb.jpg',
+            self::SECURITY_KEY, 86400, '2001:0db8:85a3:0000:0000:8a2e:0370:7334', false, '', '', '', false,
+            self::EXPIRES_AT
+        );
+        $compressed = sign_bcdn_url(
+            'https://token-tester.b-cdn.net/300kb.jpg',
+            self::SECURITY_KEY, 86400, '2001:db8:85a3::8a2e:370:7334', false, '', '', '', false,
+            self::EXPIRES_AT
+        );
+        $this->assertSame($expanded, $compressed);
     }
 
     public function testCombinedIPv6CountryDirectory(): void
@@ -74,7 +89,7 @@ class TokenSignerTest extends TestCase
         );
 
         $this->assertSame(
-            'https://token-tester.b-cdn.net/bcdn_token=HS256-om4aK_1Gnb3m2_5WVMtLzD-vlubUyDo1mJ0FFrKU1Kk&token_countries=CA%2CUS&expires=1598024587/abc/',
+            'https://token-tester.b-cdn.net/bcdn_token=HS256-1-TrSbI6dVaWEq8s7tuydKyhJSo9oKHA64KBhb2SgNv0E&token_countries=CA%2CUS&expires=1598024587/abc/',
             $result
         );
     }
@@ -158,7 +173,7 @@ class TokenSignerTest extends TestCase
         );
 
         $this->assertSame(
-            'https://token-tester.b-cdn.net/bcdn_token=HS256-pj8ytucbBWXT_M5cAqKGu4pshB2Q_s28G2uMfjhc3lA&token_countries=CA%2CUS&expires=1598024587/abc/',
+            'https://token-tester.b-cdn.net/bcdn_token=HS256-1-eZuSzuE7KvWxa-lfmEG6eVOp4OmuPlFyzD6acZT8j_o&token_countries=CA%2CUS&expires=1598024587/abc/',
             $result
         );
     }
@@ -186,7 +201,7 @@ class TokenSignerTest extends TestCase
         );
 
         $this->assertSame(
-            'https://token-tester.b-cdn.net/bcdn_token=HS256-9M87MQhNKZqVdjqgHo1IMFVNa01tL2DwlmjBCtou08I&limit=5000&expires=1598024587/abc/',
+            'https://token-tester.b-cdn.net/bcdn_token=HS256-1-NasywRGZDPxXIxBgQ2iyxSP3EWxxok3bzpYhWgaU8BQ&limit=5000&expires=1598024587/abc/',
             $result
         );
     }
@@ -201,5 +216,25 @@ class TokenSignerTest extends TestCase
     {
         $this->expectException(InvalidArgumentException::class);
         sign_bcdn_url('https://example.com/file.jpg', 'key', -1);
+    }
+
+    public function testNoUserIpOmitsFlagPrefix(): void
+    {
+        $result = sign_bcdn_url(
+            'https://token-tester.b-cdn.net/300kb.jpg',
+            self::SECURITY_KEY, 86400, '', false, '', '', '', false,
+            self::EXPIRES_AT
+        );
+        $this->assertStringNotContainsString('HS256-1-', $result);
+    }
+
+    public function testInvalidIpThrows(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        sign_bcdn_url(
+            'https://token-tester.b-cdn.net/300kb.jpg',
+            self::SECURITY_KEY, 86400, 'not-an-ip', false, '', '', '', false,
+            self::EXPIRES_AT
+        );
     }
 }
