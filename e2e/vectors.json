@@ -70,6 +70,11 @@
       "name": "ip_v4_blocked",
       "signedUrl": "https://token-tester.b-cdn.net/300kb.jpg?token=HS256-1-myF6Rnz7Z9VAfAjjkyUHJQ_6gr-AJ7VyPsG5rQdQKm8&token_countries_blocked=RU%2CCN&expires=1598024587",
       "token": "HS256-1-myF6Rnz7Z9VAfAjjkyUHJQ_6gr-AJ7VyPsG5rQdQKm8"
+    },
+    {
+      "name": "ip_v6_blocked",
+      "signedUrl": "https://token-tester.b-cdn.net/300kb.jpg?token=HS256-1-XGkCf_JKNfOrpWAM_CIYjZBbVHbB4U1mxHg8pXJtBNc&token_countries_blocked=RU%2CCN&expires=1598024587",
+      "token": "HS256-1-XGkCf_JKNfOrpWAM_CIYjZBbVHbB4U1mxHg8pXJtBNc"
     }
   ]
 }
