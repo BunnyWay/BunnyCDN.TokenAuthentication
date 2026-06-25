@@ -16,6 +16,7 @@
     { "name": "ip_v4_limit",      "path": "/abc/",             "userIp": "1.2.3.4", "isDirectory": true,  "pathAllowed": "",     "countriesAllowed": "",      "countriesBlocked": "",      "ignoreParams": false, "speedLimit": 5000, "countryCode": "US" },
     { "name": "ip_v4_path",       "path": "/abc/300kb.jpg",    "userIp": "1.2.3.4", "isDirectory": false, "pathAllowed": "/abc", "countriesAllowed": "",      "countriesBlocked": "",      "ignoreParams": false, "speedLimit": 0,    "countryCode": "US" },
     { "name": "ip_v4_ignore",     "path": "/300kb.jpg",        "userIp": "1.2.3.4", "isDirectory": false, "pathAllowed": "",     "countriesAllowed": "",      "countriesBlocked": "",      "ignoreParams": true,  "speedLimit": 0,    "countryCode": "US" },
-    { "name": "ip_v4_blocked",    "path": "/300kb.jpg",        "userIp": "1.2.3.4", "isDirectory": false, "pathAllowed": "",     "countriesAllowed": "",      "countriesBlocked": "RU,CN", "ignoreParams": false, "speedLimit": 0,    "countryCode": "US" }
+    { "name": "ip_v4_blocked",    "path": "/300kb.jpg",        "userIp": "1.2.3.4", "isDirectory": false, "pathAllowed": "",     "countriesAllowed": "",      "countriesBlocked": "RU,CN", "ignoreParams": false, "speedLimit": 0,    "countryCode": "US" },
+    { "name": "ip_v6_blocked",    "path": "/300kb.jpg",        "userIp": "2001:0db8:85a3:0000:0000:8a2e:0370:7334", "isDirectory": false, "pathAllowed": "", "countriesAllowed": "", "countriesBlocked": "RU,CN", "ignoreParams": false, "speedLimit": 0, "countryCode": "US" }
   ]
 }
