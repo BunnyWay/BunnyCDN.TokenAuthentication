@@ -71,7 +71,7 @@ namespace BunnyCDN.TokenAuthentication.Tests
                 t.UserIp = "2001:0db8:85a3:0000:0000:8a2e:0370:7334";
             });
 
-            url.ShouldBe("https://token-tester.b-cdn.net/300kb.jpg?token=HS256-1-1avZgnR84EtR3eNPVtiOT8RtI9UqcvijgXVU88vxZ60&expires=1598024587");
+            url.ShouldBe("https://token-tester.b-cdn.net/300kb.jpg?token=HS256-1-Z1BaGdhTZdU4iANcyKpurFR2VgCNdqC6hlBv5x_TyaI&expires=1598024587");
         }
 
         [Test]
@@ -108,7 +108,7 @@ namespace BunnyCDN.TokenAuthentication.Tests
                 t.CountriesAllowed = new List<string> { "CA", "US" };
             });
 
-            url.ShouldBe("https://token-tester.b-cdn.net/bcdn_token=HS256-1-TrSbI6dVaWEq8s7tuydKyhJSo9oKHA64KBhb2SgNv0E&token_countries=CA%2CUS&expires=1598024587/abc/");
+            url.ShouldBe("https://token-tester.b-cdn.net/bcdn_token=HS256-1-LGpoP8i1bV4P1kN4NrO_iYxLJuLAD2R3Clstsy9kWAc&token_countries=CA%2CUS&expires=1598024587/abc/");
         }
 
         [Test]
@@ -212,7 +212,7 @@ namespace BunnyCDN.TokenAuthentication.Tests
                 t.CountriesAllowed = new List<string> { "CA", "US" };
             });
 
-            url.ShouldBe("https://token-tester.b-cdn.net/bcdn_token=HS256-1-eZuSzuE7KvWxa-lfmEG6eVOp4OmuPlFyzD6acZT8j_o&token_countries=CA%2CUS&expires=1598024587/abc/");
+            url.ShouldBe("https://token-tester.b-cdn.net/bcdn_token=HS256-1-4lIDGI2_t3wiTmopXzB7z71wtZKTe1Ic0lDlL72iAJw&token_countries=CA%2CUS&expires=1598024587/abc/");
         }
 
         [Test]
@@ -260,7 +260,7 @@ namespace BunnyCDN.TokenAuthentication.Tests
                 t.SpeedLimit = 5000;
             });
 
-            url.ShouldBe("https://token-tester.b-cdn.net/bcdn_token=HS256-1-NasywRGZDPxXIxBgQ2iyxSP3EWxxok3bzpYhWgaU8BQ&limit=5000&expires=1598024587/abc/");
+            url.ShouldBe("https://token-tester.b-cdn.net/bcdn_token=HS256-1-X01Z6A9xAo1_ds1XFf9y8gAIzk_JpmoevOx7EtgMQhY&limit=5000&expires=1598024587/abc/");
         }
 
         [Test]

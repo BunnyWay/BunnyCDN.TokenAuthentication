@@ -91,10 +91,8 @@ public class TokenSigner {
         }
 
         try {
-            // Step 1: Parse URL
             URI uri = new URI(url);
 
-            // Step 2: Parse query string manually
             TreeMap<String, String> queryParams = new TreeMap<>();
             String query = uri.getRawQuery();
             if (query != null && !query.isEmpty()) {
@@ -117,7 +115,6 @@ public class TokenSigner {
                 }
             }
 
-            // Step 3: Add countries to query params
             if (countriesAllowed != null && !countriesAllowed.isEmpty()) {
                 queryParams.put("token_countries", countriesAllowed);
             }
@@ -128,7 +125,6 @@ public class TokenSigner {
                 queryParams.put("limit", String.valueOf(speedLimit));
             }
 
-            // Step 4: Compute expires
             String expires;
             if (expiresAt != null) {
                 expires = String.valueOf(expiresAt);
@@ -136,7 +132,7 @@ public class TokenSigner {
                 expires = String.valueOf(System.currentTimeMillis() / 1000L + expirationTime);
             }
 
-            // Step 5: Build parameters
+            // Signed parameters are folded in sorted (lexicographic) key order; TreeMap enforces this.
             TreeMap<String, String> parameters = new TreeMap<>();
             if (ignoreParams) {
                 parameters.put("token_ignore_params", "true");
@@ -147,7 +143,6 @@ public class TokenSigner {
                 parameters.put("token_path", pathAllowed);
             }
 
-            // Step 6: signaturePath
             String signaturePath;
             if (pathAllowed != null && !pathAllowed.isEmpty()) {
                 signaturePath = pathAllowed;
@@ -155,7 +150,7 @@ public class TokenSigner {
                 signaturePath = uri.getPath();
             }
 
-            // Step 7: signingData (raw values)
+            // signingData folds parameters as key=value (raw, undecoded values) joined by '&'.
             StringBuilder signingData = new StringBuilder();
             for (Map.Entry<String, String> entry : parameters.entrySet()) {
                 if (signingData.length() > 0) {
@@ -164,7 +159,7 @@ public class TokenSigner {
                 signingData.append(entry.getKey()).append('=').append(entry.getValue());
             }
 
-            // Step 8: urlData (URL-encoded values, space as %20)
+            // urlData mirrors signingData but URL-encodes values (space as %20) for the output URL.
             StringBuilder urlData = new StringBuilder();
             for (Map.Entry<String, String> entry : parameters.entrySet()) {
                 if (urlData.length() > 0) {
@@ -175,7 +170,8 @@ public class TokenSigner {
                 urlData.append(entry.getKey()).append('=').append(encodedValue);
             }
 
-            // Step 9: HMAC-SHA256
+            // When an IP restriction is present, the token carries a "1-" flag prefix and the
+            // IP bytes are folded into the HMAC; otherwise the prefix is empty and no IP bytes.
             boolean hasIp = userIp != null && !userIp.isEmpty();
             byte[] ipBytes = hasIp ? userIpToBytes(userIp) : new byte[0];
             String flagsPrefix = hasIp ? "1-" : "";
@@ -184,17 +180,17 @@ public class TokenSigner {
             SecretKeySpec keySpec = new SecretKeySpec(
                     securityKey.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
             mac.init(keySpec);
+            // HMAC payload fold order: signaturePath, expires, ipBytes, signingData.
             mac.update(signaturePath.getBytes(StandardCharsets.UTF_8));
             mac.update(expires.getBytes(StandardCharsets.UTF_8));
-            mac.update(signingData.toString().getBytes(StandardCharsets.UTF_8));
             mac.update(ipBytes);
+            mac.update(signingData.toString().getBytes(StandardCharsets.UTF_8));
             byte[] digest = mac.doFinal();
 
-            // Step 10: token
+            // Token format: "HS256-" + flag prefix ("1-" when IP-restricted) + base64url(digest), unpadded.
             String token = "HS256-" + flagsPrefix
                     + Base64.getUrlEncoder().withoutPadding().encodeToString(digest);
 
-            // Step 12: Build final URL
             String base = uri.getScheme() + "://" + uri.getHost();
             String path = uri.getRawPath();
             String tail = urlData.length() == 0 ? "" : "&" + urlData;
@@ -225,7 +221,15 @@ public class TokenSigner {
             throw new IllegalArgumentException("userIp '" + userIp + "' is not a valid IP address");
         }
         try {
-            return InetAddress.getByName(userIp).getAddress();
+            byte[] bytes = InetAddress.getByName(userIp).getAddress();
+            if (bytes.length == 16) {
+                // Mask IPv6 to the /64 prefix: keep the first 8 bytes (network
+                // portion), zero the last 8 (interface identifier). IPv4 is left unchanged.
+                for (int i = 8; i < 16; i++) {
+                    bytes[i] = 0;
+                }
+            }
+            return bytes;
         } catch (UnknownHostException e) {
             throw new IllegalArgumentException("userIp '" + userIp + "' is not a valid IP address", e);
         }

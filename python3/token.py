@@ -116,6 +116,10 @@ def sign_url(
 
     if user_ip:
         ip_segment = ipaddress.ip_address(user_ip).packed
+        if len(ip_segment) == 16:
+            # Mask IPv6 to the /64 prefix: keep the first 8 bytes (network
+            # portion), zero the last 8 (interface identifier). IPv4 is left unchanged.
+            ip_segment = ip_segment[:8] + b"\x00" * 8
         flags_prefix = "1-"
     else:
         ip_segment = b""
@@ -124,8 +128,8 @@ def sign_url(
     message = (
         signature_path.encode("utf-8")
         + expires.encode("utf-8")
-        + signing_data.encode("utf-8")
         + ip_segment
+        + signing_data.encode("utf-8")
     )
     digest = hmac.new(
         security_key.encode("utf-8"),

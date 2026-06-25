@@ -19,7 +19,11 @@ function userIpToBytes(userIp) {
         return buf;
     }
     if (family === 6) {
-        return parseIpv6(userIp);
+        const buf = parseIpv6(userIp);
+        // Mask IPv6 to the /64 prefix: keep the first 8 bytes (network
+        // portion), zero the last 8 (interface identifier). IPv4 is left unchanged.
+        buf.fill(0, 8);
+        return buf;
     }
     throw new Error(`userIp '${userIp}' is not a valid IP address`);
 }
@@ -110,10 +114,8 @@ function signUrl(
         throw new Error('expirationTime must be non-negative');
     }
 
-    // 1. Parse URL
     const parsed = new URL(url);
 
-    // 2. Collect query params, reject duplicates
     const queryParams = {};
     for (const [key, value] of parsed.searchParams) {
         if (Object.prototype.hasOwnProperty.call(queryParams, key)) {
@@ -122,7 +124,6 @@ function signUrl(
         queryParams[key] = value;
     }
 
-    // 3. Add country restrictions to params
     if (countriesAllowed) {
         queryParams['token_countries'] = countriesAllowed;
     }
@@ -133,12 +134,10 @@ function signUrl(
         queryParams['limit'] = String(speedLimit);
     }
 
-    // 4. Compute expires
     const expires = expiresAt != null
         ? String(expiresAt)
         : String(Math.floor(Date.now() / 1000) + expirationTime);
 
-    // 5. Build parameters object
     let parameters;
     if (ignoreParams) {
         parameters = { token_ignore_params: 'true' };
@@ -148,37 +147,36 @@ function signUrl(
     if (pathAllowed) {
         parameters['token_path'] = pathAllowed;
     }
-    // Sort entries by key
+    // Parameters are folded into the signature sorted by key; signingData uses raw
+    // values, urlData uses URL-encoded values.
     const sortedEntries = Object.entries(parameters).sort(([a], [b]) => a.localeCompare(b));
 
-    // 6. signaturePath
     const signaturePath = pathAllowed || parsed.pathname;
 
-    // 7. signingData (raw values)
     const signingData = sortedEntries.map(([k, v]) => `${k}=${v}`).join('&');
 
-    // 8. urlData (encoded values)
     const urlData = sortedEntries.map(([k, v]) => `${k}=${encodeURIComponent(v)}`).join('&');
 
-    // 9. HMAC-SHA256
     const hasIp = !!userIp;
     const ipBytes = hasIp ? userIpToBytes(userIp) : Buffer.alloc(0);
     const flagsPrefix = hasIp ? '1-' : '';
 
+    // HMAC payload is folded in this exact order: signaturePath, expires, ipBytes
+    // (IPv6 masked to /64, empty when no IP), then signingData.
     const hmac = crypto.createHmac('sha256', securityKey);
     hmac.update(signaturePath);
     hmac.update(expires);
-    hmac.update(signingData);
     hmac.update(ipBytes);
+    hmac.update(signingData);
     const digest = hmac.digest();
 
-    // 10. token
+    // Token is "HS256-" + flags prefix ("1-" when IP-locked, else empty) + base64url
+    // digest (+/ -> -_, trailing '=' stripped).
     const token = 'HS256-' + flagsPrefix + digest.toString('base64')
         .replace(/\+/g, '-')
         .replace(/\//g, '_')
         .replace(/=+$/, '');
 
-    // 12. Build final URL
     const base = `${parsed.protocol}//${parsed.host}`;
     const tail = urlData ? `&${urlData}` : '';
 

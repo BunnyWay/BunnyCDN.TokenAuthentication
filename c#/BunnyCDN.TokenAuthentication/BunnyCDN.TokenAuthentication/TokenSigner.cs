@@ -88,14 +88,14 @@ namespace BunnyCDN.TokenAuthentication
             var expiresBytes = Encoding.UTF8.GetBytes(expires);
             ms.Write(expiresBytes, 0, expiresBytes.Length);
 
-            var signingBytes = Encoding.UTF8.GetBytes(signingData);
-            ms.Write(signingBytes, 0, signingBytes.Length);
-
             if (hasIp)
             {
                 var ipBytes = GetUserIpBytes(userIp);
                 ms.Write(ipBytes, 0, ipBytes.Length);
             }
+
+            var signingBytes = Encoding.UTF8.GetBytes(signingData);
+            ms.Write(signingBytes, 0, signingBytes.Length);
 
             return ms.ToArray();
         }
@@ -109,7 +109,17 @@ namespace BunnyCDN.TokenAuthentication
                 addr.AddressFamily != AddressFamily.InterNetworkV6)
                 throw new ArgumentException($"UserIp '{userIp}' has unsupported address family {addr.AddressFamily}.", nameof(userIp));
 
-            return addr.GetAddressBytes();
+            var bytes = addr.GetAddressBytes();
+
+            // Mask IPv6 to the /64 prefix: keep the first 8 bytes (network
+            // portion), zero the last 8 (interface identifier). IPv4 is left unchanged.
+            if (bytes.Length == 16)
+            {
+                for (var i = 8; i < 16; i++)
+                    bytes[i] = 0;
+            }
+
+            return bytes;
         }
 
         private static SortedDictionary<string, string> BuildParameters(
@@ -159,7 +169,6 @@ namespace BunnyCDN.TokenAuthentication
             if (string.IsNullOrEmpty(query))
                 return result;
 
-            // Skip leading '?'
             var start = query[0] == '?' ? 1 : 0;
             if (start >= query.Length)
                 return result;
@@ -222,7 +231,7 @@ namespace BunnyCDN.TokenAuthentication
 
         private static string Base64UrlNopad(ReadOnlySpan<byte> bytes)
         {
-            Span<char> buf = stackalloc char[44]; // ceil(32/3)*4
+            Span<char> buf = stackalloc char[44];
             Convert.TryToBase64Chars(bytes, buf, out var written);
 
             while (written > 0 && buf[written - 1] == '=') written--;

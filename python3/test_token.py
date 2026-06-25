@@ -67,7 +67,7 @@ def test_with_ipv6_address():
     )
     assert result == (
         "https://token-tester.b-cdn.net/300kb.jpg"
-        "?token=HS256-1-1avZgnR84EtR3eNPVtiOT8RtI9UqcvijgXVU88vxZ60"
+        "?token=HS256-1-Z1BaGdhTZdU4iANcyKpurFR2VgCNdqC6hlBv5x_TyaI"
         "&expires=1598024587"
     )
 
@@ -96,7 +96,7 @@ def test_combined_ipv6_country_directory():
     )
     assert result == (
         "https://token-tester.b-cdn.net/"
-        "bcdn_token=HS256-1-TrSbI6dVaWEq8s7tuydKyhJSo9oKHA64KBhb2SgNv0E"
+        "bcdn_token=HS256-1-LGpoP8i1bV4P1kN4NrO_iYxLJuLAD2R3Clstsy9kWAc"
         "&token_countries=CA%2CUS&expires=1598024587/abc/"
     )
 
@@ -180,7 +180,7 @@ def test_combined_ip_country_directory():
     )
     assert result == (
         "https://token-tester.b-cdn.net/"
-        "bcdn_token=HS256-1-eZuSzuE7KvWxa-lfmEG6eVOp4OmuPlFyzD6acZT8j_o"
+        "bcdn_token=HS256-1-4lIDGI2_t3wiTmopXzB7z71wtZKTe1Ic0lDlL72iAJw"
         "&token_countries=CA%2CUS&expires=1598024587/abc/"
     )
 
@@ -209,7 +209,7 @@ def test_combined_speed_limit_ip_directory():
     )
     assert result == (
         "https://token-tester.b-cdn.net/"
-        "bcdn_token=HS256-1-NasywRGZDPxXIxBgQ2iyxSP3EWxxok3bzpYhWgaU8BQ"
+        "bcdn_token=HS256-1-X01Z6A9xAo1_ds1XFf9y8gAIzk_JpmoevOx7EtgMQhY"
         "&limit=5000&expires=1598024587/abc/"
     )
 

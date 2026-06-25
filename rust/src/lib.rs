@@ -54,7 +54,6 @@ pub fn sign_url(
 
     let parsed = Url::parse(raw_url).map_err(|e| format!("invalid URL: {e}"))?;
 
-    // Parse query params, rejecting duplicates.
     let mut query_params = BTreeMap::new();
     if let Some(query) = parsed.query() {
         for pair in query.split('&') {
@@ -85,7 +84,6 @@ pub fn sign_url(
         query_params.insert("limit".into(), speed_limit.to_string());
     }
 
-    // Compute expires.
     let expires = match expires_at {
         Some(ts) => ts.to_string(),
         None => {
@@ -97,7 +95,6 @@ pub fn sign_url(
         }
     };
 
-    // Build parameters.
     let mut parameters = BTreeMap::new();
     if ignore_params {
         parameters.insert("token_ignore_params".into(), "true".into());
@@ -132,7 +129,6 @@ pub fn sign_url(
         .collect::<Vec<_>>()
         .join("&");
 
-    // HMAC-SHA256.
     let (ip_bytes, flags_prefix): (Vec<u8>, &str) = if user_ip.is_empty() {
         (Vec::new(), "")
     } else {
@@ -143,12 +139,11 @@ pub fn sign_url(
         HmacSha256::new_from_slice(security_key.as_bytes()).map_err(|e| e.to_string())?;
     mac.update(signature_path.as_bytes());
     mac.update(expires.as_bytes());
-    mac.update(signing_data.as_bytes());
     mac.update(&ip_bytes);
+    mac.update(signing_data.as_bytes());
     let digest = mac.finalize().into_bytes();
     let token = format!("HS256-{flags_prefix}{}", URL_SAFE_NO_PAD.encode(digest));
 
-    // Build final URL.
     let base = format!("{}://{}", parsed.scheme(), parsed.host_str().unwrap_or(""));
     let tail = if url_data.is_empty() {
         String::new()
@@ -175,7 +170,15 @@ fn user_ip_to_bytes(user_ip: &str) -> Result<Vec<u8>, String> {
         .map_err(|_| format!("user_ip '{user_ip}' is not a valid IP address"))?;
     match addr {
         IpAddr::V4(v4) => Ok(v4.octets().to_vec()),
-        IpAddr::V6(v6) => Ok(v6.octets().to_vec()),
+        IpAddr::V6(v6) => {
+            // Mask IPv6 to the /64 prefix: keep the first 8 bytes (network
+            // portion), zero the last 8 (interface identifier). IPv4 is left unchanged.
+            let mut octets = v6.octets();
+            for b in &mut octets[8..] {
+                *b = 0;
+            }
+            Ok(octets.to_vec())
+        }
     }
 }
 
@@ -230,7 +233,7 @@ mod tests {
             SECURITY_KEY, 86400, "2001:0db8:85a3:0000:0000:8a2e:0370:7334", false, "", "", "", false, Some(EXPIRES_AT), 0,
         ).unwrap();
         assert_eq!(result,
-            "https://token-tester.b-cdn.net/300kb.jpg?token=HS256-1-1avZgnR84EtR3eNPVtiOT8RtI9UqcvijgXVU88vxZ60&expires=1598024587");
+            "https://token-tester.b-cdn.net/300kb.jpg?token=HS256-1-Z1BaGdhTZdU4iANcyKpurFR2VgCNdqC6hlBv5x_TyaI&expires=1598024587");
     }
 
     #[test]
@@ -253,7 +256,7 @@ mod tests {
             SECURITY_KEY, 86400, "2001:0db8:85a3:0000:0000:8a2e:0370:7334", true, "", "CA,US", "", false, Some(EXPIRES_AT), 0,
         ).unwrap();
         assert_eq!(result,
-            "https://token-tester.b-cdn.net/bcdn_token=HS256-1-TrSbI6dVaWEq8s7tuydKyhJSo9oKHA64KBhb2SgNv0E&token_countries=CA%2CUS&expires=1598024587/abc/");
+            "https://token-tester.b-cdn.net/bcdn_token=HS256-1-LGpoP8i1bV4P1kN4NrO_iYxLJuLAD2R3Clstsy9kWAc&token_countries=CA%2CUS&expires=1598024587/abc/");
     }
 
     #[test]
@@ -313,7 +316,7 @@ mod tests {
             SECURITY_KEY, 86400, "1.2.3.4", true, "", "CA,US", "", false, Some(EXPIRES_AT), 0,
         ).unwrap();
         assert_eq!(result,
-            "https://token-tester.b-cdn.net/bcdn_token=HS256-1-eZuSzuE7KvWxa-lfmEG6eVOp4OmuPlFyzD6acZT8j_o&token_countries=CA%2CUS&expires=1598024587/abc/");
+            "https://token-tester.b-cdn.net/bcdn_token=HS256-1-4lIDGI2_t3wiTmopXzB7z71wtZKTe1Ic0lDlL72iAJw&token_countries=CA%2CUS&expires=1598024587/abc/");
     }
 
     #[test]
@@ -333,7 +336,7 @@ mod tests {
             SECURITY_KEY, 86400, "1.2.3.4", true, "", "", "", false, Some(EXPIRES_AT), 5000,
         ).unwrap();
         assert_eq!(result,
-            "https://token-tester.b-cdn.net/bcdn_token=HS256-1-NasywRGZDPxXIxBgQ2iyxSP3EWxxok3bzpYhWgaU8BQ&limit=5000&expires=1598024587/abc/");
+            "https://token-tester.b-cdn.net/bcdn_token=HS256-1-X01Z6A9xAo1_ds1XFf9y8gAIzk_JpmoevOx7EtgMQhY&limit=5000&expires=1598024587/abc/");
     }
 
     #[test]

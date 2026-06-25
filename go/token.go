@@ -55,7 +55,6 @@ func SignUrl(
 		return "", fmt.Errorf("invalid URL: %w", err)
 	}
 
-	// Parse query params manually, rejecting duplicates.
 	queryParams := make(map[string]string)
 	if parsed.RawQuery != "" {
 		for _, pair := range strings.Split(parsed.RawQuery, "&") {
@@ -97,7 +96,6 @@ func SignUrl(
 		queryParams["limit"] = fmt.Sprintf("%d", speedLimit)
 	}
 
-	// Compute expires.
 	var expires string
 	if expiresAt != nil {
 		expires = fmt.Sprintf("%d", *expiresAt)
@@ -105,7 +103,6 @@ func SignUrl(
 		expires = fmt.Sprintf("%d", time.Now().Unix()+expirationTime)
 	}
 
-	// Build parameters.
 	parameters := make(map[string]string)
 	if ignoreParams {
 		parameters["token_ignore_params"] = "true"
@@ -118,7 +115,6 @@ func SignUrl(
 		parameters["token_path"] = pathAllowed
 	}
 
-	// Sort keys.
 	keys := make([]string, 0, len(parameters))
 	for k := range parameters {
 		keys = append(keys, k)
@@ -154,11 +150,10 @@ func SignUrl(
 	mac := hmac.New(sha256.New, []byte(securityKey))
 	mac.Write([]byte(signaturePath))
 	mac.Write([]byte(expires))
-	mac.Write([]byte(signingData))
 	mac.Write(ipBytes)
+	mac.Write([]byte(signingData))
 	token := "HS256-" + flagsPrefix + base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
 
-	// Build final URL.
 	base := parsed.Scheme + "://" + parsed.Host
 	tail := ""
 	if urlData != "" {
@@ -185,5 +180,10 @@ func userIpBytes(userIp string) ([]byte, error) {
 	if v4 := ip.To4(); v4 != nil {
 		return v4, nil
 	}
-	return ip.To16(), nil
+	// Mask IPv6 to the /64 prefix: keep the first 8 bytes (network
+	// portion), zero the last 8 (interface identifier). IPv4 is left unchanged.
+	v6 := ip.To16()
+	masked := make([]byte, 16)
+	copy(masked, v6[:8])
+	return masked, nil
 }

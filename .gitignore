@@ -1,0 +1,36 @@
+# Build artifacts and caches across all signer languages.
+# Source lives in e2e/, go/cmd/, rust/examples/, */src — those are tracked;
+# only generated output is ignored here.
+
+# Rust
+/rust/target/
+/rust/Cargo.lock
+
+# .NET
+/c#/**/bin/
+/c#/**/obj/
+
+# Java
+/java/out/
+/java/target/
+*.class
+
+# Node
+**/node_modules/
+
+# PHP
+/php/vendor/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Editors / IDEs
+.idea/
+.vs/
+
+# e2e cross-language emit output (generated token dumps + downloaded artifacts;
+# the committed e2e sources are inputs.json / vectors.json / *.py / emit.*)
+/tokens-*.json
+/emitted/
