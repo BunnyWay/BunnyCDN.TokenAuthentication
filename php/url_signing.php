@@ -25,7 +25,6 @@ function sign_bcdn_url(
         throw new InvalidArgumentException('expiration_time must be non-negative');
     }
 
-    // Parse URL
     $parsed = parse_url($url);
     $url_scheme = $parsed['scheme'] ?? '';
     $url_host = $parsed['host'] ?? '';
@@ -46,7 +45,6 @@ function sign_bcdn_url(
         }
     }
 
-    // Add countries params
     if ($countries_allowed !== '') {
         if (array_key_exists('token_countries', $query_params)) {
             throw new InvalidArgumentException("Duplicate query parameter 'token_countries' is not supported");
@@ -63,10 +61,8 @@ function sign_bcdn_url(
         $query_params['limit'] = (string) $speed_limit;
     }
 
-    // Compute expires
     $expires = $expires_at !== null ? $expires_at : time() + $expiration_time;
 
-    // Build parameters dict
     if ($ignore_params) {
         $parameters = ['token_ignore_params' => 'true'];
     } else {
@@ -79,7 +75,6 @@ function sign_bcdn_url(
 
     ksort($parameters);
 
-    // Signature path
     $signature_path = $path_allowed !== '' ? $path_allowed : $url_path;
 
     // Build signing data (raw values) and url data (rawurlencode values)
@@ -92,14 +87,15 @@ function sign_bcdn_url(
     $signing_data = implode('&', $signing_parts);
     $url_data = implode('&', $url_parts);
 
-    // Build message and compute HMAC-SHA256
-    $message = $signature_path . $expires . $signing_data . $user_ip;
+    $has_ip = $user_ip !== '';
+    $ip_bytes = $has_ip ? user_ip_to_bytes($user_ip) : '';
+    $flags_prefix = $has_ip ? '1-' : '';
+
+    $message = $signature_path . $expires . $ip_bytes . $signing_data;
     $digest = hash_hmac('sha256', $message, $security_key, true);
 
-    // Build token
-    $token = 'HS256-' . rtrim(strtr(base64_encode($digest), '+/', '-_'), '=');
+    $token = 'HS256-' . $flags_prefix . rtrim(strtr(base64_encode($digest), '+/', '-_'), '=');
 
-    // Build final URL
     $base = "{$url_scheme}://{$url_host}";
     $tail = $url_data !== '' ? "&{$url_data}" : '';
 
@@ -108,4 +104,18 @@ function sign_bcdn_url(
     } else {
         return "{$base}{$url_path}?token={$token}{$tail}&expires={$expires}";
     }
+}
+
+function user_ip_to_bytes(string $user_ip): string
+{
+    $bytes = @inet_pton($user_ip);
+    if ($bytes === false) {
+        throw new InvalidArgumentException("user_ip '{$user_ip}' is not a valid IP address");
+    }
+    // Mask IPv6 to the /64 prefix: keep the first 8 bytes (network
+    // portion), zero the last 8 (interface identifier). IPv4 is left unchanged.
+    if (strlen($bytes) === 16) {
+        $bytes = substr($bytes, 0, 8) . str_repeat("\0", 8);
+    }
+    return $bytes;
 }

@@ -57,7 +57,7 @@ namespace BunnyCDN.TokenAuthentication.Tests
                 t.UserIp = "1.2.3.4";
             });
 
-            url.ShouldBe("https://token-tester.b-cdn.net/300kb.jpg?token=HS256-0A9FRzMI9ACT-5VKMPbJf7g8f7UHavqjBH1Z8HljoEk&expires=1598024587");
+            url.ShouldBe("https://token-tester.b-cdn.net/300kb.jpg?token=HS256-1-L2rISTLcujMY9UFf2tbZ41d5i-Bme1g1oTK_Z2QMLJk&expires=1598024587");
         }
 
         [Test]
@@ -71,7 +71,28 @@ namespace BunnyCDN.TokenAuthentication.Tests
                 t.UserIp = "2001:0db8:85a3:0000:0000:8a2e:0370:7334";
             });
 
-            url.ShouldBe("https://token-tester.b-cdn.net/300kb.jpg?token=HS256-7CEOZ-eY9DjC36ZnazCM3Ykj3-bR6h9V_IncIVT2s2U&expires=1598024587");
+            url.ShouldBe("https://token-tester.b-cdn.net/300kb.jpg?token=HS256-1-Z1BaGdhTZdU4iANcyKpurFR2VgCNdqC6hlBv5x_TyaI&expires=1598024587");
+        }
+
+        [Test]
+        public void IPv6CompressedFormMatchesExpanded()
+        {
+            var expanded = TokenSigner.SignUrl(t =>
+            {
+                t.Url = "https://token-tester.b-cdn.net/300kb.jpg";
+                t.SecurityKey = SecurityKey;
+                t.ExpiresAt = ExpiresAtGlobal;
+                t.UserIp = "2001:0db8:85a3:0000:0000:8a2e:0370:7334";
+            });
+            var compressed = TokenSigner.SignUrl(t =>
+            {
+                t.Url = "https://token-tester.b-cdn.net/300kb.jpg";
+                t.SecurityKey = SecurityKey;
+                t.ExpiresAt = ExpiresAtGlobal;
+                t.UserIp = "2001:db8:85a3::8a2e:370:7334";
+            });
+
+            compressed.ShouldBe(expanded);
         }
 
         [Test]
@@ -87,7 +108,7 @@ namespace BunnyCDN.TokenAuthentication.Tests
                 t.CountriesAllowed = new List<string> { "CA", "US" };
             });
 
-            url.ShouldBe("https://token-tester.b-cdn.net/bcdn_token=HS256-om4aK_1Gnb3m2_5WVMtLzD-vlubUyDo1mJ0FFrKU1Kk&token_countries=CA%2CUS&expires=1598024587/abc/");
+            url.ShouldBe("https://token-tester.b-cdn.net/bcdn_token=HS256-1-LGpoP8i1bV4P1kN4NrO_iYxLJuLAD2R3Clstsy9kWAc&token_countries=CA%2CUS&expires=1598024587/abc/");
         }
 
         [Test]
@@ -191,7 +212,7 @@ namespace BunnyCDN.TokenAuthentication.Tests
                 t.CountriesAllowed = new List<string> { "CA", "US" };
             });
 
-            url.ShouldBe("https://token-tester.b-cdn.net/bcdn_token=HS256-pj8ytucbBWXT_M5cAqKGu4pshB2Q_s28G2uMfjhc3lA&token_countries=CA%2CUS&expires=1598024587/abc/");
+            url.ShouldBe("https://token-tester.b-cdn.net/bcdn_token=HS256-1-4lIDGI2_t3wiTmopXzB7z71wtZKTe1Ic0lDlL72iAJw&token_countries=CA%2CUS&expires=1598024587/abc/");
         }
 
         [Test]
@@ -239,7 +260,7 @@ namespace BunnyCDN.TokenAuthentication.Tests
                 t.SpeedLimit = 5000;
             });
 
-            url.ShouldBe("https://token-tester.b-cdn.net/bcdn_token=HS256-9M87MQhNKZqVdjqgHo1IMFVNa01tL2DwlmjBCtou08I&limit=5000&expires=1598024587/abc/");
+            url.ShouldBe("https://token-tester.b-cdn.net/bcdn_token=HS256-1-X01Z6A9xAo1_ds1XFf9y8gAIzk_JpmoevOx7EtgMQhY&limit=5000&expires=1598024587/abc/");
         }
 
         [Test]
@@ -262,6 +283,32 @@ namespace BunnyCDN.TokenAuthentication.Tests
                 {
                     t.Url = "https://token-tester.b-cdn.net/300kb.jpg";
                     t.SecurityKey = SecurityKey;
+                }));
+        }
+
+        [Test]
+        public void NoUserIpOmitsFlagPrefix()
+        {
+            var url = TokenSigner.SignUrl(t =>
+            {
+                t.Url = "https://token-tester.b-cdn.net/300kb.jpg";
+                t.SecurityKey = SecurityKey;
+                t.ExpiresAt = ExpiresAtGlobal;
+            });
+
+            url.ShouldNotContain("HS256-1-");
+        }
+
+        [Test]
+        public void InvalidIpThrows()
+        {
+            Should.Throw<ArgumentException>(() =>
+                TokenSigner.SignUrl(t =>
+                {
+                    t.Url = "https://token-tester.b-cdn.net/300kb.jpg";
+                    t.SecurityKey = SecurityKey;
+                    t.ExpiresAt = ExpiresAtGlobal;
+                    t.UserIp = "not-an-ip";
                 }));
         }
     }

@@ -1,3 +1,4 @@
+// Package bunnycdn implements BunnyCDN URL token authentication.
 package bunnycdn
 
 import (
@@ -6,11 +7,15 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"net"
 	"net/url"
 	"sort"
 	"strings"
 	"time"
 )
+
+// Version is the SDK release version.
+const Version = "2.1.0"
 
 // SignUrl generates a signed BunnyCDN URL using HMAC-SHA256 token authentication.
 //
@@ -50,7 +55,6 @@ func SignUrl(
 		return "", fmt.Errorf("invalid URL: %w", err)
 	}
 
-	// Parse query params manually, rejecting duplicates.
 	queryParams := make(map[string]string)
 	if parsed.RawQuery != "" {
 		for _, pair := range strings.Split(parsed.RawQuery, "&") {
@@ -92,7 +96,6 @@ func SignUrl(
 		queryParams["limit"] = fmt.Sprintf("%d", speedLimit)
 	}
 
-	// Compute expires.
 	var expires string
 	if expiresAt != nil {
 		expires = fmt.Sprintf("%d", *expiresAt)
@@ -100,7 +103,6 @@ func SignUrl(
 		expires = fmt.Sprintf("%d", time.Now().Unix()+expirationTime)
 	}
 
-	// Build parameters.
 	parameters := make(map[string]string)
 	if ignoreParams {
 		parameters["token_ignore_params"] = "true"
@@ -113,7 +115,6 @@ func SignUrl(
 		parameters["token_path"] = pathAllowed
 	}
 
-	// Sort keys.
 	keys := make([]string, 0, len(parameters))
 	for k := range parameters {
 		keys = append(keys, k)
@@ -136,13 +137,23 @@ func SignUrl(
 	signingData := strings.Join(signingParts, "&")
 	urlData := strings.Join(urlParts, "&")
 
-	// HMAC-SHA256.
-	message := signaturePath + expires + signingData + userIp
-	mac := hmac.New(sha256.New, []byte(securityKey))
-	mac.Write([]byte(message))
-	token := "HS256-" + base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
+	flagsPrefix := ""
+	var ipBytes []byte
+	if userIp != "" {
+		ipBytes, err = userIpBytes(userIp)
+		if err != nil {
+			return "", err
+		}
+		flagsPrefix = "1-"
+	}
 
-	// Build final URL.
+	mac := hmac.New(sha256.New, []byte(securityKey))
+	mac.Write([]byte(signaturePath))
+	mac.Write([]byte(expires))
+	mac.Write(ipBytes)
+	mac.Write([]byte(signingData))
+	token := "HS256-" + flagsPrefix + base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
+
 	base := parsed.Scheme + "://" + parsed.Host
 	tail := ""
 	if urlData != "" {
@@ -157,4 +168,22 @@ func SignUrl(
 
 func percentEncode(s string) string {
 	return strings.ReplaceAll(url.QueryEscape(s), "+", "%20")
+}
+
+func userIpBytes(userIp string) ([]byte, error) {
+	ip := net.ParseIP(userIp)
+	if ip == nil {
+		return nil, fmt.Errorf("userIp %q is not a valid IP address", userIp)
+	}
+	// net.ParseIP returns a 16-byte IPv4-mapped slice for "1.2.3.4"; the
+	// 4-byte form is what callers expect.
+	if v4 := ip.To4(); v4 != nil {
+		return v4, nil
+	}
+	// Mask IPv6 to the /64 prefix: keep the first 8 bytes (network
+	// portion), zero the last 8 (interface identifier). IPv4 is left unchanged.
+	v6 := ip.To16()
+	masked := make([]byte, 16)
+	copy(masked, v6[:8])
+	return masked, nil
 }

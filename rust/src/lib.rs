@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::net::IpAddr;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use base64::Engine;
@@ -53,7 +54,6 @@ pub fn sign_url(
 
     let parsed = Url::parse(raw_url).map_err(|e| format!("invalid URL: {e}"))?;
 
-    // Parse query params, rejecting duplicates.
     let mut query_params = BTreeMap::new();
     if let Some(query) = parsed.query() {
         for pair in query.split('&') {
@@ -84,7 +84,6 @@ pub fn sign_url(
         query_params.insert("limit".into(), speed_limit.to_string());
     }
 
-    // Compute expires.
     let expires = match expires_at {
         Some(ts) => ts.to_string(),
         None => {
@@ -96,7 +95,6 @@ pub fn sign_url(
         }
     };
 
-    // Build parameters.
     let mut parameters = BTreeMap::new();
     if ignore_params {
         parameters.insert("token_ignore_params".into(), "true".into());
@@ -131,15 +129,21 @@ pub fn sign_url(
         .collect::<Vec<_>>()
         .join("&");
 
-    // HMAC-SHA256.
-    let message = format!("{signature_path}{expires}{signing_data}{user_ip}");
+    let (ip_bytes, flags_prefix): (Vec<u8>, &str) = if user_ip.is_empty() {
+        (Vec::new(), "")
+    } else {
+        (user_ip_to_bytes(user_ip)?, "1-")
+    };
+
     let mut mac =
         HmacSha256::new_from_slice(security_key.as_bytes()).map_err(|e| e.to_string())?;
-    mac.update(message.as_bytes());
+    mac.update(signature_path.as_bytes());
+    mac.update(expires.as_bytes());
+    mac.update(&ip_bytes);
+    mac.update(signing_data.as_bytes());
     let digest = mac.finalize().into_bytes();
-    let token = format!("HS256-{}", URL_SAFE_NO_PAD.encode(digest));
+    let token = format!("HS256-{flags_prefix}{}", URL_SAFE_NO_PAD.encode(digest));
 
-    // Build final URL.
     let base = format!("{}://{}", parsed.scheme(), parsed.host_str().unwrap_or(""));
     let tail = if url_data.is_empty() {
         String::new()
@@ -157,6 +161,24 @@ pub fn sign_url(
             "{base}{}?token={token}{tail}&expires={expires}",
             parsed.path()
         ))
+    }
+}
+
+fn user_ip_to_bytes(user_ip: &str) -> Result<Vec<u8>, String> {
+    let addr: IpAddr = user_ip
+        .parse()
+        .map_err(|_| format!("user_ip '{user_ip}' is not a valid IP address"))?;
+    match addr {
+        IpAddr::V4(v4) => Ok(v4.octets().to_vec()),
+        IpAddr::V6(v6) => {
+            // Mask IPv6 to the /64 prefix: keep the first 8 bytes (network
+            // portion), zero the last 8 (interface identifier). IPv4 is left unchanged.
+            let mut octets = v6.octets();
+            for b in &mut octets[8..] {
+                *b = 0;
+            }
+            Ok(octets.to_vec())
+        }
     }
 }
 
@@ -201,7 +223,7 @@ mod tests {
             SECURITY_KEY, 86400, "1.2.3.4", false, "", "", "", false, Some(EXPIRES_AT), 0,
         ).unwrap();
         assert_eq!(result,
-            "https://token-tester.b-cdn.net/300kb.jpg?token=HS256-0A9FRzMI9ACT-5VKMPbJf7g8f7UHavqjBH1Z8HljoEk&expires=1598024587");
+            "https://token-tester.b-cdn.net/300kb.jpg?token=HS256-1-L2rISTLcujMY9UFf2tbZ41d5i-Bme1g1oTK_Z2QMLJk&expires=1598024587");
     }
 
     #[test]
@@ -211,7 +233,20 @@ mod tests {
             SECURITY_KEY, 86400, "2001:0db8:85a3:0000:0000:8a2e:0370:7334", false, "", "", "", false, Some(EXPIRES_AT), 0,
         ).unwrap();
         assert_eq!(result,
-            "https://token-tester.b-cdn.net/300kb.jpg?token=HS256-7CEOZ-eY9DjC36ZnazCM3Ykj3-bR6h9V_IncIVT2s2U&expires=1598024587");
+            "https://token-tester.b-cdn.net/300kb.jpg?token=HS256-1-Z1BaGdhTZdU4iANcyKpurFR2VgCNdqC6hlBv5x_TyaI&expires=1598024587");
+    }
+
+    #[test]
+    fn ipv6_compressed_form_matches_expanded() {
+        let expanded = sign_url(
+            "https://token-tester.b-cdn.net/300kb.jpg",
+            SECURITY_KEY, 86400, "2001:0db8:85a3:0000:0000:8a2e:0370:7334", false, "", "", "", false, Some(EXPIRES_AT), 0,
+        ).unwrap();
+        let compressed = sign_url(
+            "https://token-tester.b-cdn.net/300kb.jpg",
+            SECURITY_KEY, 86400, "2001:db8:85a3::8a2e:370:7334", false, "", "", "", false, Some(EXPIRES_AT), 0,
+        ).unwrap();
+        assert_eq!(expanded, compressed);
     }
 
     #[test]
@@ -221,7 +256,7 @@ mod tests {
             SECURITY_KEY, 86400, "2001:0db8:85a3:0000:0000:8a2e:0370:7334", true, "", "CA,US", "", false, Some(EXPIRES_AT), 0,
         ).unwrap();
         assert_eq!(result,
-            "https://token-tester.b-cdn.net/bcdn_token=HS256-om4aK_1Gnb3m2_5WVMtLzD-vlubUyDo1mJ0FFrKU1Kk&token_countries=CA%2CUS&expires=1598024587/abc/");
+            "https://token-tester.b-cdn.net/bcdn_token=HS256-1-LGpoP8i1bV4P1kN4NrO_iYxLJuLAD2R3Clstsy9kWAc&token_countries=CA%2CUS&expires=1598024587/abc/");
     }
 
     #[test]
@@ -281,7 +316,7 @@ mod tests {
             SECURITY_KEY, 86400, "1.2.3.4", true, "", "CA,US", "", false, Some(EXPIRES_AT), 0,
         ).unwrap();
         assert_eq!(result,
-            "https://token-tester.b-cdn.net/bcdn_token=HS256-pj8ytucbBWXT_M5cAqKGu4pshB2Q_s28G2uMfjhc3lA&token_countries=CA%2CUS&expires=1598024587/abc/");
+            "https://token-tester.b-cdn.net/bcdn_token=HS256-1-4lIDGI2_t3wiTmopXzB7z71wtZKTe1Ic0lDlL72iAJw&token_countries=CA%2CUS&expires=1598024587/abc/");
     }
 
     #[test]
@@ -301,7 +336,7 @@ mod tests {
             SECURITY_KEY, 86400, "1.2.3.4", true, "", "", "", false, Some(EXPIRES_AT), 5000,
         ).unwrap();
         assert_eq!(result,
-            "https://token-tester.b-cdn.net/bcdn_token=HS256-9M87MQhNKZqVdjqgHo1IMFVNa01tL2DwlmjBCtou08I&limit=5000&expires=1598024587/abc/");
+            "https://token-tester.b-cdn.net/bcdn_token=HS256-1-X01Z6A9xAo1_ds1XFf9y8gAIzk_JpmoevOx7EtgMQhY&limit=5000&expires=1598024587/abc/");
     }
 
     #[test]
@@ -313,6 +348,24 @@ mod tests {
     #[test]
     fn validation_negative_expiry() {
         let result = sign_url("https://example.com/f.jpg", "key", -1, "", false, "", "", "", false, None, 0);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn no_user_ip_omits_flag_prefix() {
+        let result = sign_url(
+            "https://token-tester.b-cdn.net/300kb.jpg",
+            SECURITY_KEY, 86400, "", false, "", "", "", false, Some(EXPIRES_AT), 0,
+        ).unwrap();
+        assert!(!result.contains("HS256-1-"));
+    }
+
+    #[test]
+    fn invalid_ip_returns_error() {
+        let result = sign_url(
+            "https://token-tester.b-cdn.net/300kb.jpg",
+            SECURITY_KEY, 86400, "not-an-ip", false, "", "", "", false, Some(EXPIRES_AT), 0,
+        );
         assert!(result.is_err());
     }
 }
