@@ -45,6 +45,8 @@ function sign_bcdn_url(
         }
     }
 
+    unset($query_params['token_ignore_params']);
+
     if ($countries_allowed !== '') {
         if (array_key_exists('token_countries', $query_params)) {
             throw new InvalidArgumentException("Duplicate query parameter 'token_countries' is not supported");
@@ -63,10 +65,15 @@ function sign_bcdn_url(
 
     $expires = $expires_at !== null ? $expires_at : time() + $expiration_time;
 
+    $signed_token_params = ['token_path', 'token_countries', 'token_countries_blocked', 'token_referer'];
+    $parameters = [];
+    foreach ($query_params as $key => $value) {
+        if (!$ignore_params || in_array((string) $key, $signed_token_params, true)) {
+            $parameters[$key] = $value;
+        }
+    }
     if ($ignore_params) {
-        $parameters = ['token_ignore_params' => 'true'];
-    } else {
-        $parameters = $query_params;
+        $parameters['token_ignore_params'] = 'true';
     }
 
     if ($path_allowed !== '') {

@@ -17,6 +17,11 @@ import (
 // Version is the SDK release version.
 const Version = "2.1.0"
 
+var signedTokenParams = map[string]bool{
+	"token_path": true, "token_countries": true, "token_countries_blocked": true,
+	"token_referer": true,
+}
+
 // SignUrl generates a signed BunnyCDN URL using HMAC-SHA256 token authentication.
 //
 // Parameters:
@@ -86,6 +91,8 @@ func SignUrl(
 		}
 	}
 
+	delete(queryParams, "token_ignore_params")
+
 	if countriesAllowed != "" {
 		queryParams["token_countries"] = countriesAllowed
 	}
@@ -104,12 +111,13 @@ func SignUrl(
 	}
 
 	parameters := make(map[string]string)
-	if ignoreParams {
-		parameters["token_ignore_params"] = "true"
-	} else {
-		for k, v := range queryParams {
+	for k, v := range queryParams {
+		if !ignoreParams || signedTokenParams[k] {
 			parameters[k] = v
 		}
+	}
+	if ignoreParams {
+		parameters["token_ignore_params"] = "true"
 	}
 	if pathAllowed != "" {
 		parameters["token_path"] = pathAllowed

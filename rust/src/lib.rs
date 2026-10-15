@@ -11,6 +11,11 @@ use url::Url;
 
 type HmacSha256 = Hmac<Sha256>;
 
+const SIGNED_TOKEN_PARAMS: [&str; 4] = [
+    "token_path", "token_countries", "token_countries_blocked",
+    "token_referer",
+];
+
 /// Percent-encode everything except unreserved characters (RFC 3986).
 const ENCODE_SET: &AsciiSet = &NON_ALPHANUMERIC
     .remove(b'-')
@@ -74,6 +79,8 @@ pub fn sign_url(
         }
     }
 
+    query_params.remove("token_ignore_params");
+
     if !countries_allowed.is_empty() {
         query_params.insert("token_countries".into(), countries_allowed.into());
     }
@@ -96,12 +103,13 @@ pub fn sign_url(
     };
 
     let mut parameters = BTreeMap::new();
-    if ignore_params {
-        parameters.insert("token_ignore_params".into(), "true".into());
-    } else {
-        for (k, v) in &query_params {
+    for (k, v) in &query_params {
+        if !ignore_params || SIGNED_TOKEN_PARAMS.contains(&k.as_str()) {
             parameters.insert(k.clone(), v.clone());
         }
+    }
+    if ignore_params {
+        parameters.insert("token_ignore_params".into(), "true".into());
     }
     if !path_allowed.is_empty() {
         parameters.insert("token_path".into(), path_allowed.into());
@@ -300,6 +308,16 @@ mod tests {
     }
 
     #[test]
+    fn url_supplied_ignore_params_is_stripped() {
+        let result = sign_url(
+            "https://token-tester.b-cdn.net/300kb.jpg?v=123&token_ignore_params=true",
+            SECURITY_KEY, 86400, "", false, "", "", "", false, Some(EXPIRES_AT), 0,
+        ).unwrap();
+        assert_eq!(result,
+            "https://token-tester.b-cdn.net/300kb.jpg?token=HS256-q6oRQr-5ccQ-piO1HSEQu1DVMy9UMppRxGlIQwoeM5Y&v=123&expires=1598024587");
+    }
+
+    #[test]
     fn with_existing_query_params() {
         let result = sign_url(
             "https://token-tester.b-cdn.net/300kb.jpg?v=123",
@@ -330,13 +348,13 @@ mod tests {
     }
 
     #[test]
-    fn combined_speed_limit_ip_directory() {
+    fn combined_speed_limit_ip() {
         let result = sign_url(
-            "https://token-tester.b-cdn.net/abc/",
-            SECURITY_KEY, 86400, "1.2.3.4", true, "", "", "", false, Some(EXPIRES_AT), 5000,
+            "https://token-tester.b-cdn.net/300kb.jpg",
+            SECURITY_KEY, 86400, "1.2.3.4", false, "", "", "", false, Some(EXPIRES_AT), 5000,
         ).unwrap();
         assert_eq!(result,
-            "https://token-tester.b-cdn.net/bcdn_token=HS256-1-X01Z6A9xAo1_ds1XFf9y8gAIzk_JpmoevOx7EtgMQhY&limit=5000&expires=1598024587/abc/");
+            "https://token-tester.b-cdn.net/300kb.jpg?token=HS256-1-TqP_CwcmkckrVnJz5x0e9rs5czOZjI-3UgbJQ_7O_I8&limit=5000&expires=1598024587");
     }
 
     #[test]

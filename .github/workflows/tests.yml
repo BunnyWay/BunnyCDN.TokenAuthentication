@@ -158,12 +158,13 @@ jobs:
       - name: Auto-commit regenerated vectors.json
         if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
         run: |
-          if git diff --quiet -- e2e/vectors.json; then
+          # Stage first to detect untracked vectors.json.
+          git add e2e/vectors.json
+          if git diff --cached --quiet -- e2e/vectors.json; then
             echo "vectors.json already up to date."
           else
             git config user.name  "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add e2e/vectors.json
             git commit -m "chore(e2e): regenerate vectors.json [skip ci]"
             git push
             echo "::notice::vectors.json was stale — regenerated and committed to the PR branch."
@@ -172,8 +173,9 @@ jobs:
       - name: Fail if stale (cannot auto-commit here)
         if: "!(github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository)"
         run: |
-          if ! git diff --quiet -- e2e/vectors.json; then
-            echo "::error::e2e/vectors.json is stale. Run 'python e2e/gen_vectors.py' and commit."
+          # Include untracked and missing vectors.json.
+          if [ -n "$(git status --porcelain -- e2e/vectors.json)" ]; then
+            echo "::error::e2e/vectors.json is stale or uncommitted. Run 'python e2e/gen_vectors.py' and commit."
             exit 1
           fi
           echo "vectors.json is up to date."

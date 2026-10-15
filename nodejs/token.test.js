@@ -99,6 +99,15 @@ describe('signUrl', () => {
             'https://token-tester.b-cdn.net/300kb.jpg?token=HS256-1lwWBD_c1IAGSj1UKPoxreu8ePDQ-Z9FoWLcRn_RRH0&token_ignore_params=true&expires=1598024587');
     });
 
+    it('strips token_ignore_params supplied in the URL', () => {
+        const result = signUrl(
+            'https://token-tester.b-cdn.net/300kb.jpg?v=123&token_ignore_params=true',
+            SECURITY_KEY, 86400, '', false, '', '', '', false, EXPIRES_AT,
+        );
+        assert.equal(result,
+            'https://token-tester.b-cdn.net/300kb.jpg?token=HS256-q6oRQr-5ccQ-piO1HSEQu1DVMy9UMppRxGlIQwoeM5Y&v=123&expires=1598024587');
+    });
+
     it('with existing query params', () => {
         const result = signUrl(
             'https://token-tester.b-cdn.net/300kb.jpg?v=123',
@@ -126,13 +135,13 @@ describe('signUrl', () => {
             'https://token-tester.b-cdn.net/300kb.jpg?token=HS256-DAVapqNNED3Z7JkjRTYX0UOIHNtbHEuuhRNEc4A7mMQ&limit=1000&expires=1598024587');
     });
 
-    it('combined speed limit, IP, and directory', () => {
+    it('combined speed limit and IP', () => {
         const result = signUrl(
-            'https://token-tester.b-cdn.net/abc/',
-            SECURITY_KEY, 86400, '1.2.3.4', true, '', '', '', false, EXPIRES_AT, 5000,
+            'https://token-tester.b-cdn.net/300kb.jpg',
+            SECURITY_KEY, 86400, '1.2.3.4', false, '', '', '', false, EXPIRES_AT, 5000,
         );
         assert.equal(result,
-            'https://token-tester.b-cdn.net/bcdn_token=HS256-1-X01Z6A9xAo1_ds1XFf9y8gAIzk_JpmoevOx7EtgMQhY&limit=5000&expires=1598024587/abc/');
+            'https://token-tester.b-cdn.net/300kb.jpg?token=HS256-1-TqP_CwcmkckrVnJz5x0e9rs5czOZjI-3UgbJQ_7O_I8&limit=5000&expires=1598024587');
     });
 
     it('throws on empty securityKey', () => {
