@@ -42,7 +42,7 @@ Where `signingData` is the alphabetically-sorted query parameters joined as `key
 | `pathAllowed` | Restrict the token scope to a specific path |
 | `countriesAllowed` | Comma-separated allow-list of country codes (e.g. `CA,US`) |
 | `countriesBlocked` | Comma-separated block-list of country codes |
-| `ignoreParams` | Exclude query parameters from token validation |
+| `ignoreParams` | Exclude non-`token_` query parameters from token validation (`token_` parameters are always signed) |
 | `expiresAt` | Absolute Unix timestamp for expiration. Overrides `expirationTime` when set. In C# this is a `DateTimeOffset` property on `TokenConfig`. |
 | `speedLimit` | Download speed limit in kB/s (0 = no limit). Maps to the `limit` query parameter. |
 

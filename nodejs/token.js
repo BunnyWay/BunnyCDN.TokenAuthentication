@@ -1,6 +1,11 @@
 const crypto = require('crypto');
 const net = require('net');
 
+const SIGNED_TOKEN_PARAMS = new Set([
+    'token_path', 'token_countries', 'token_countries_blocked',
+    'token_referer',
+]);
+
 function userIpToBytes(userIp) {
     const family = net.isIP(userIp);
     if (family === 4) {
@@ -124,6 +129,8 @@ function signUrl(
         queryParams[key] = value;
     }
 
+    delete queryParams['token_ignore_params'];
+
     if (countriesAllowed) {
         queryParams['token_countries'] = countriesAllowed;
     }
@@ -138,11 +145,14 @@ function signUrl(
         ? String(expiresAt)
         : String(Math.floor(Date.now() / 1000) + expirationTime);
 
-    let parameters;
+    const parameters = {};
+    for (const [key, value] of Object.entries(queryParams)) {
+        if (!ignoreParams || SIGNED_TOKEN_PARAMS.has(key)) {
+            parameters[key] = value;
+        }
+    }
     if (ignoreParams) {
-        parameters = { token_ignore_params: 'true' };
-    } else {
-        parameters = Object.assign({}, queryParams);
+        parameters['token_ignore_params'] = 'true';
     }
     if (pathAllowed) {
         parameters['token_path'] = pathAllowed;

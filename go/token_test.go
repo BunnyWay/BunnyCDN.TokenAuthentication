@@ -155,6 +155,20 @@ func TestWithIgnoreParams(t *testing.T) {
 	}
 }
 
+func TestUrlSuppliedIgnoreParamsIsStripped(t *testing.T) {
+	result, err := SignUrl(
+		"https://token-tester.b-cdn.net/300kb.jpg?v=123&token_ignore_params=true",
+		securityKey, 86400, "", false, "", "", "", false, &expiresAt, 0,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	expected := "https://token-tester.b-cdn.net/300kb.jpg?token=HS256-q6oRQr-5ccQ-piO1HSEQu1DVMy9UMppRxGlIQwoeM5Y&v=123&expires=1598024587"
+	if result != expected {
+		t.Errorf("got %s, want %s", result, expected)
+	}
+}
+
 func TestWithExistingQueryParams(t *testing.T) {
 	result, err := SignUrl(
 		"https://token-tester.b-cdn.net/300kb.jpg?v=123",
@@ -197,15 +211,15 @@ func TestWithSpeedLimit(t *testing.T) {
 	}
 }
 
-func TestCombinedSpeedLimitIPDirectory(t *testing.T) {
+func TestCombinedSpeedLimitIP(t *testing.T) {
 	result, err := SignUrl(
-		"https://token-tester.b-cdn.net/abc/",
-		securityKey, 86400, "1.2.3.4", true, "", "", "", false, &expiresAt, 5000,
+		"https://token-tester.b-cdn.net/300kb.jpg",
+		securityKey, 86400, "1.2.3.4", false, "", "", "", false, &expiresAt, 5000,
 	)
 	if err != nil {
 		t.Fatal(err)
 	}
-	expected := "https://token-tester.b-cdn.net/bcdn_token=HS256-1-X01Z6A9xAo1_ds1XFf9y8gAIzk_JpmoevOx7EtgMQhY&limit=5000&expires=1598024587/abc/"
+	expected := "https://token-tester.b-cdn.net/300kb.jpg?token=HS256-1-TqP_CwcmkckrVnJz5x0e9rs5czOZjI-3UgbJQ_7O_I8&limit=5000&expires=1598024587"
 	if result != expected {
 		t.Errorf("got %s, want %s", result, expected)
 	}

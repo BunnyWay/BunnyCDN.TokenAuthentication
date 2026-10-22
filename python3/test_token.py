@@ -157,6 +157,20 @@ def test_with_ignore_params():
     )
 
 
+def test_url_supplied_ignore_params_is_stripped():
+    result = sign_url(
+        "https://token-tester.b-cdn.net/300kb.jpg?v=123&token_ignore_params=true",
+        SECURITY_KEY,
+        is_directory=False,
+        expires_at=EXPIRES_AT,
+    )
+    assert result == (
+        "https://token-tester.b-cdn.net/300kb.jpg"
+        "?token=HS256-q6oRQr-5ccQ-piO1HSEQu1DVMy9UMppRxGlIQwoeM5Y"
+        "&v=123&expires=1598024587"
+    )
+
+
 def test_with_existing_query_params():
     result = sign_url(
         "https://token-tester.b-cdn.net/300kb.jpg?v=123",
@@ -199,18 +213,18 @@ def test_with_speed_limit():
     )
 
 
-def test_combined_speed_limit_ip_directory():
+def test_combined_speed_limit_ip():
     result = sign_url(
-        "https://token-tester.b-cdn.net/abc/",
+        "https://token-tester.b-cdn.net/300kb.jpg",
         SECURITY_KEY,
-        user_ip="1.2.3.4", is_directory=True,
+        user_ip="1.2.3.4", is_directory=False,
         expires_at=EXPIRES_AT,
         speed_limit=5000,
     )
     assert result == (
-        "https://token-tester.b-cdn.net/"
-        "bcdn_token=HS256-1-X01Z6A9xAo1_ds1XFf9y8gAIzk_JpmoevOx7EtgMQhY"
-        "&limit=5000&expires=1598024587/abc/"
+        "https://token-tester.b-cdn.net/300kb.jpg"
+        "?token=HS256-1-TqP_CwcmkckrVnJz5x0e9rs5czOZjI-3UgbJQ_7O_I8"
+        "&limit=5000&expires=1598024587"
     )
 
 

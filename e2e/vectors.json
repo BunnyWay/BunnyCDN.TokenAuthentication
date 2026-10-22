@@ -53,8 +53,8 @@
     },
     {
       "name": "ip_v4_limit",
-      "signedUrl": "https://token-tester.b-cdn.net/bcdn_token=HS256-1-X01Z6A9xAo1_ds1XFf9y8gAIzk_JpmoevOx7EtgMQhY&limit=5000&expires=1598024587/abc/",
-      "token": "HS256-1-X01Z6A9xAo1_ds1XFf9y8gAIzk_JpmoevOx7EtgMQhY"
+      "signedUrl": "https://token-tester.b-cdn.net/300kb.jpg?token=HS256-1-TqP_CwcmkckrVnJz5x0e9rs5czOZjI-3UgbJQ_7O_I8&limit=5000&expires=1598024587",
+      "token": "HS256-1-TqP_CwcmkckrVnJz5x0e9rs5czOZjI-3UgbJQ_7O_I8"
     },
     {
       "name": "ip_v4_path",
@@ -75,6 +75,21 @@
       "name": "ip_v6_blocked",
       "signedUrl": "https://token-tester.b-cdn.net/300kb.jpg?token=HS256-1-XGkCf_JKNfOrpWAM_CIYjZBbVHbB4U1mxHg8pXJtBNc&token_countries_blocked=RU%2CCN&expires=1598024587",
       "token": "HS256-1-XGkCf_JKNfOrpWAM_CIYjZBbVHbB4U1mxHg8pXJtBNc"
+    },
+    {
+      "name": "ignore_countries",
+      "signedUrl": "https://token-tester.b-cdn.net/300kb.jpg?token=HS256-tP3sMGX1z-AQMJ_4T9WS5IIxsyL_YKHzGizIbvNfnbo&token_countries=CA%2CUS&token_ignore_params=true&expires=1598024587",
+      "token": "HS256-tP3sMGX1z-AQMJ_4T9WS5IIxsyL_YKHzGizIbvNfnbo"
+    },
+    {
+      "name": "ip_v4_ignore_blocked",
+      "signedUrl": "https://token-tester.b-cdn.net/bcdn_token=HS256-1-zO4YGSsp43-LSAPr_Ahj8kP5QlXQDsZjJim0ux7NqWg&token_countries_blocked=RU%2CCN&token_ignore_params=true&expires=1598024587/abc/",
+      "token": "HS256-1-zO4YGSsp43-LSAPr_Ahj8kP5QlXQDsZjJim0ux7NqWg"
+    },
+    {
+      "name": "url_supplied_ignore_params",
+      "signedUrl": "https://token-tester.b-cdn.net/300kb.jpg?token=HS256-q6oRQr-5ccQ-piO1HSEQu1DVMy9UMppRxGlIQwoeM5Y&v=123&expires=1598024587",
+      "token": "HS256-q6oRQr-5ccQ-piO1HSEQu1DVMy9UMppRxGlIQwoeM5Y"
     }
   ]
 }

@@ -187,6 +187,34 @@ namespace BunnyCDN.TokenAuthentication.Tests
         }
 
         [Test]
+        public void IgnoreParamsStillSignsTokenParams()
+        {
+            var url = TokenSigner.SignUrl(t =>
+            {
+                t.Url = "https://token-tester.b-cdn.net/300kb.jpg?width=200&token_id=abc";
+                t.SecurityKey = SecurityKey;
+                t.ExpiresAt = ExpiresAtGlobal;
+                t.IgnoreParams = true;
+                t.CountriesAllowed = new List<string> { "CA", "US" };
+            });
+
+            url.ShouldBe("https://token-tester.b-cdn.net/300kb.jpg?token=HS256-tP3sMGX1z-AQMJ_4T9WS5IIxsyL_YKHzGizIbvNfnbo&token_countries=CA%2CUS&token_ignore_params=true&expires=1598024587");
+        }
+
+        [Test]
+        public void UrlSuppliedIgnoreParamsIsStripped()
+        {
+            var url = TokenSigner.SignUrl(t =>
+            {
+                t.Url = "https://token-tester.b-cdn.net/300kb.jpg?v=123&token_ignore_params=true";
+                t.SecurityKey = SecurityKey;
+                t.ExpiresAt = ExpiresAtGlobal;
+            });
+
+            url.ShouldBe("https://token-tester.b-cdn.net/300kb.jpg?token=HS256-q6oRQr-5ccQ-piO1HSEQu1DVMy9UMppRxGlIQwoeM5Y&v=123&expires=1598024587");
+        }
+
+        [Test]
         public void WithExistingQueryParams()
         {
             var url = TokenSigner.SignUrl(t =>
@@ -248,19 +276,18 @@ namespace BunnyCDN.TokenAuthentication.Tests
         }
 
         [Test]
-        public void CombinedSpeedLimitIPDirectory()
+        public void CombinedSpeedLimitIP()
         {
             var url = TokenSigner.SignUrl(t =>
             {
-                t.Url = "https://token-tester.b-cdn.net/abc/";
+                t.Url = "https://token-tester.b-cdn.net/300kb.jpg";
                 t.SecurityKey = SecurityKey;
                 t.ExpiresAt = ExpiresAtGlobal;
-                t.IsDirectory = true;
                 t.UserIp = "1.2.3.4";
                 t.SpeedLimit = 5000;
             });
 
-            url.ShouldBe("https://token-tester.b-cdn.net/bcdn_token=HS256-1-X01Z6A9xAo1_ds1XFf9y8gAIzk_JpmoevOx7EtgMQhY&limit=5000&expires=1598024587/abc/");
+            url.ShouldBe("https://token-tester.b-cdn.net/300kb.jpg?token=HS256-1-TqP_CwcmkckrVnJz5x0e9rs5czOZjI-3UgbJQ_7O_I8&limit=5000&expires=1598024587");
         }
 
         [Test]

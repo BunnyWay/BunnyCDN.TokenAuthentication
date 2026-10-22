@@ -16,23 +16,31 @@ def _b64url_no_pad(raw: bytes) -> str:
     return base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
 
 
+_SIGNED_TOKEN_PARAMS = frozenset({
+    "token_path", "token_countries", "token_countries_blocked",
+    "token_referer",
+})
+
+
 def _build_parameters(
     parsed_query: str,
     *,
     ignore_params: bool,
     path_allowed: str,
 ) -> Dict[str, str]:
+    raw = urllib.parse.parse_qs(parsed_query, keep_blank_values=True)
+    params: Dict[str, str] = {}
+    for key, values in raw.items():
+        if ignore_params and key not in _SIGNED_TOKEN_PARAMS:
+            continue
+        if len(values) > 1:
+            raise ValueError(
+                f"Multi-valued query parameter {key!r} is not supported"
+            )
+        params[key] = values[0]
+
     if ignore_params:
-        params: Dict[str, str] = {"token_ignore_params": "true"}
-    else:
-        raw = urllib.parse.parse_qs(parsed_query, keep_blank_values=True)
-        params = {}
-        for key, values in raw.items():
-            if len(values) > 1:
-                raise ValueError(
-                    f"Multi-valued query parameter {key!r} is not supported"
-                )
-            params[key] = values[0]
+        params["token_ignore_params"] = "true"
 
     if path_allowed:
         params["token_path"] = path_allowed
@@ -85,6 +93,8 @@ def sign_url(
 
     parsed = urllib.parse.urlparse(url)
     query_params = urllib.parse.parse_qs(parsed.query, keep_blank_values=True)
+
+    query_params.pop("token_ignore_params", None)
 
     if countries_allowed:
         query_params["token_countries"] = [countries_allowed]

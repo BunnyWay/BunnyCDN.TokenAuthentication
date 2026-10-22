@@ -16,6 +16,11 @@ namespace BunnyCDN.TokenAuthentication
     /// </summary>
     public static class TokenSigner
     {
+        private static readonly HashSet<string> SignedTokenParams = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "token_path", "token_countries", "token_countries_blocked", "token_referer",
+        };
+
         public static string SignUrl(Action<TokenConfig> configFunc)
         {
             var config = new TokenConfig();
@@ -25,6 +30,8 @@ namespace BunnyCDN.TokenAuthentication
             var uri = new Uri(config.Url);
 
             var queryParams = ParseQueryString(uri.Query);
+
+            queryParams.Remove("token_ignore_params");
 
             if (config.CountriesAllowed.Any())
                 queryParams["token_countries"] = string.Join(",", config.CountriesAllowed).ToUpperInvariant();
@@ -129,15 +136,14 @@ namespace BunnyCDN.TokenAuthentication
         {
             var result = new SortedDictionary<string, string>(StringComparer.Ordinal);
 
-            if (ignoreParams)
+            foreach (var kv in queryParams)
             {
-                result["token_ignore_params"] = "true";
-            }
-            else
-            {
-                foreach (var kv in queryParams)
+                if (!ignoreParams || SignedTokenParams.Contains(kv.Key))
                     result[kv.Key] = kv.Value;
             }
+
+            if (ignoreParams)
+                result["token_ignore_params"] = "true";
 
             if (!string.IsNullOrEmpty(tokenPath))
                 result["token_path"] = tokenPath;

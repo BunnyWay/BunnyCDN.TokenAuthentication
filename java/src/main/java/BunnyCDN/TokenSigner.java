@@ -12,10 +12,15 @@ import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.regex.Pattern;
 
 public class TokenSigner {
+
+    private static final Set<String> SIGNED_TOKEN_PARAMS = Set.of(
+            "token_path", "token_countries", "token_countries_blocked",
+            "token_referer");
 
     /**
      * Convenience overload without ignoreParams and expiresAt.
@@ -115,6 +120,8 @@ public class TokenSigner {
                 }
             }
 
+            queryParams.remove("token_ignore_params");
+
             if (countriesAllowed != null && !countriesAllowed.isEmpty()) {
                 queryParams.put("token_countries", countriesAllowed);
             }
@@ -134,10 +141,13 @@ public class TokenSigner {
 
             // Signed parameters are folded in sorted (lexicographic) key order; TreeMap enforces this.
             TreeMap<String, String> parameters = new TreeMap<>();
+            for (Map.Entry<String, String> e : queryParams.entrySet()) {
+                if (!ignoreParams || SIGNED_TOKEN_PARAMS.contains(e.getKey())) {
+                    parameters.put(e.getKey(), e.getValue());
+                }
+            }
             if (ignoreParams) {
                 parameters.put("token_ignore_params", "true");
-            } else {
-                parameters.putAll(queryParams);
             }
             if (pathAllowed != null && !pathAllowed.isEmpty()) {
                 parameters.put("token_path", pathAllowed);
