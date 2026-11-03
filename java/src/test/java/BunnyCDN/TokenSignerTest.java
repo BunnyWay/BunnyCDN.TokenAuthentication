@@ -9,6 +9,34 @@ class TokenSignerTest {
     private static final long EXPIRES_AT = 1598024587L;
 
     @Test
+    void testPreservesPort() {
+        String result = TokenSigner.signUrl(
+            "https://token-tester.b-cdn.net:8443/300kb.jpg",
+            SECURITY_KEY, 86400, "", false, "", "", "", false, EXPIRES_AT
+        );
+        assertTrue(result.startsWith("https://token-tester.b-cdn.net:8443/300kb.jpg?token="));
+    }
+
+    @Test
+    void testDirectoryTokenRejectsQuery() {
+        for (boolean ignoreParams : new boolean[] {false, true}) {
+            assertThrows(IllegalArgumentException.class, () ->
+                TokenSigner.signUrl(
+                    "https://example.com/f.jpg?v=123", SECURITY_KEY, 86400,
+                    "", true, "", "", "", ignoreParams, EXPIRES_AT
+                )
+            );
+        }
+    }
+
+    @Test
+    void testRelativeUrlThrows() {
+        assertThrows(IllegalArgumentException.class, () ->
+            TokenSigner.signUrl("/f.jpg", SECURITY_KEY, 86400, "", false, "", "", "")
+        );
+    }
+
+    @Test
     void testWithCountriesAllowed() {
         String result = TokenSigner.signUrl(
             "https://token-tester.b-cdn.net/300kb.jpg",

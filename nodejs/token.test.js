@@ -148,6 +148,15 @@ describe('signUrl', () => {
         assert.throws(() => signUrl('https://example.com/f.jpg', ''), /securityKey/);
     });
 
+    it('rejects ordinary query fields in directory mode', () => {
+        for (const ignoreParams of [false, true]) {
+            assert.throws(() => signUrl(
+                'https://example.com/f.jpg?v=123', SECURITY_KEY,
+                86400, '', true, '', '', '', ignoreParams, EXPIRES_AT,
+            ), /Directory tokens/);
+        }
+    });
+
     it('throws on negative expirationTime', () => {
         assert.throws(() => signUrl('https://example.com/f.jpg', 'key', -1), /expirationTime/);
     });

@@ -214,6 +214,61 @@ namespace BunnyCDN.TokenAuthentication.Tests
             url.ShouldBe("https://token-tester.b-cdn.net/300kb.jpg?token=HS256-q6oRQr-5ccQ-piO1HSEQu1DVMy9UMppRxGlIQwoeM5Y&v=123&expires=1598024587");
         }
 
+        [TestCase(false)]
+        [TestCase(true)]
+        public void UrlSuppliedSignerParamsAreStripped(bool ignoreParams)
+        {
+            const string baseUrl = "https://token-tester.b-cdn.net/abc/300kb.jpg?v=123";
+            const string suppliedUrl = baseUrl + "&token=old&expires=1&token_path=%2Fabc&token_countries=ZZ&token_countries_blocked=US&token_referer=wrong.example&token_ignore_params=true&limit=1";
+
+            string Sign(string url) => TokenSigner.SignUrl(t =>
+            {
+                t.Url = url;
+                t.SecurityKey = SecurityKey;
+                t.ExpiresAt = ExpiresAtGlobal;
+                t.IgnoreParams = ignoreParams;
+            });
+
+            Sign(suppliedUrl).ShouldBe(Sign(baseUrl));
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void OptionsOverrideUrlSuppliedSignerParams(bool ignoreParams)
+        {
+            const string baseUrl = "https://token-tester.b-cdn.net/abc/300kb.jpg?v=123";
+            const string suppliedUrl = baseUrl + "&token_path=%2Fwrong&token_countries=ZZ&token_countries_blocked=US&token_referer=wrong.example&limit=1";
+
+            string Sign(string url) => TokenSigner.SignUrl(t =>
+            {
+                t.Url = url;
+                t.SecurityKey = SecurityKey;
+                t.ExpiresAt = ExpiresAtGlobal;
+                t.IgnoreParams = ignoreParams;
+                t.TokenPath = "/abc";
+                t.CountriesAllowed = new List<string> { "CA" };
+                t.CountriesBlocked = new List<string> { "RU" };
+                t.TokenReferer = "example.com";
+                t.SpeedLimit = 1000;
+            });
+
+            Sign(suppliedUrl).ShouldBe(Sign(baseUrl));
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void DirectoryTokenRejectsOrdinaryQuery(bool ignoreParams)
+        {
+            Should.Throw<ArgumentException>(() => TokenSigner.SignUrl(t =>
+            {
+                t.Url = "https://token-tester.b-cdn.net/300kb.jpg?v=123";
+                t.SecurityKey = SecurityKey;
+                t.ExpiresAt = ExpiresAtGlobal;
+                t.IsDirectory = true;
+                t.IgnoreParams = ignoreParams;
+            }));
+        }
+
         [Test]
         public void WithExistingQueryParams()
         {

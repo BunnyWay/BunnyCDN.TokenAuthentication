@@ -64,6 +64,7 @@ public final class Emit {
             String pathAllowed = (String) c.get("pathAllowed");
             String countriesAllowed = (String) c.get("countriesAllowed");
             String countriesBlocked = (String) c.get("countriesBlocked");
+            String tokenReferer = (String) c.getOrDefault("tokenReferer", "");
             boolean ignoreParams = (Boolean) c.get("ignoreParams");
             int speedLimit = ((Number) c.get("speedLimit")).intValue();
             // countryCode is intentionally ignored for signing.
@@ -79,7 +80,8 @@ public final class Emit {
                     countriesBlocked,
                     ignoreParams,
                     Long.valueOf(expires),
-                    speedLimit
+                    speedLimit,
+                    tokenReferer
             );
 
             result.put(name, extractToken(signedUrl));

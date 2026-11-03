@@ -232,6 +232,23 @@ func TestValidationEmptyKey(t *testing.T) {
 	}
 }
 
+func TestRelativeURLReturnsError(t *testing.T) {
+	_, err := SignUrl("/f.jpg", securityKey, 86400, "", false, "", "", "", false, &expiresAt, 0)
+	if err == nil {
+		t.Error("expected error for relative URL")
+	}
+}
+
+func TestDirectoryTokenRejectsQuery(t *testing.T) {
+	for _, ignoreParams := range []bool{false, true} {
+		_, err := SignUrl("https://example.com/f.jpg?v=123", securityKey, 86400,
+			"", true, "", "", "", ignoreParams, &expiresAt, 0)
+		if err == nil {
+			t.Errorf("expected error for directory query with ignoreParams=%t", ignoreParams)
+		}
+	}
+}
+
 func TestValidationNegativeExpiry(t *testing.T) {
 	_, err := SignUrl("https://example.com/f.jpg", "key", -1, "", false, "", "", "", false, nil, 0)
 	if err == nil {

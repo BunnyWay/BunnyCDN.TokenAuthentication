@@ -35,6 +35,7 @@ internal static class Program
             var countriesBlocked = c.GetProperty("countriesBlocked").GetString() ?? "";
             var ignoreParams = c.GetProperty("ignoreParams").GetBoolean();
             var speedLimit = c.GetProperty("speedLimit").GetInt32();
+            var tokenReferer = c.TryGetProperty("tokenReferer", out var referer) ? referer.GetString() : "";
             // countryCode is intentionally ignored for signing.
 
             var signedUrl = TokenSigner.SignUrl(t =>
@@ -53,6 +54,7 @@ internal static class Program
                     : new List<string>(countriesBlocked.Split(','));
                 t.IgnoreParams = ignoreParams;
                 t.SpeedLimit = speedLimit;
+                t.TokenReferer = tokenReferer;
             });
 
             tokens[name] = ExtractToken(signedUrl);

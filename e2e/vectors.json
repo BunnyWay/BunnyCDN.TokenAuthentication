@@ -87,6 +87,31 @@
       "token": "HS256-1-zO4YGSsp43-LSAPr_Ahj8kP5QlXQDsZjJim0ux7NqWg"
     },
     {
+      "name": "url_owned_unset",
+      "signedUrl": "https://token-tester.b-cdn.net/abc/300kb.jpg?token=HS256-1aiwatxXcWhN_4F5wDGL3zvyHH-PUdIXTJjXXlcxnRQ&v=123&expires=1598024587",
+      "token": "HS256-1aiwatxXcWhN_4F5wDGL3zvyHH-PUdIXTJjXXlcxnRQ"
+    },
+    {
+      "name": "url_owned_override",
+      "signedUrl": "https://token-tester.b-cdn.net/abc/300kb.jpg?token=HS256-KNpuQeOCOOoVrRUtd4uhCIFhFNmyTyLWK2vJnBpNEj4&limit=1000&token_countries=CA&token_countries_blocked=RU&token_path=%2Fabc&token_referer=example.com&v=123&expires=1598024587",
+      "token": "HS256-KNpuQeOCOOoVrRUtd4uhCIFhFNmyTyLWK2vJnBpNEj4"
+    },
+    {
+      "name": "url_owned_ignore",
+      "signedUrl": "https://token-tester.b-cdn.net/abc/300kb.jpg?token=HS256-8Mna515LUa5kzcXsH2grCAsBo-oA9r3Ez3MYVP8lrpM&token_countries=CA&token_countries_blocked=RU&token_ignore_params=true&token_path=%2Fabc&token_referer=example.com&expires=1598024587",
+      "token": "HS256-8Mna515LUa5kzcXsH2grCAsBo-oA9r3Ez3MYVP8lrpM"
+    },
+    {
+      "name": "referer_only",
+      "signedUrl": "https://token-tester.b-cdn.net/300kb.jpg?token=HS256-NRqWm69a47xjl-B_mruvCrTKA3ZimqnKoc1MDobAoZs&token_referer=example.com&expires=1598024587",
+      "token": "HS256-NRqWm69a47xjl-B_mruvCrTKA3ZimqnKoc1MDobAoZs"
+    },
+    {
+      "name": "url_owned_encoded",
+      "signedUrl": "https://token-tester.b-cdn.net/300kb.jpg?token=HS256-YOmbMB56EySpauJecQ0jZPaNASdmoqtnF3wNHGbyeKM&token_ignore_params=true&token_path=%2F&token_referer=example.com&expires=1598024587",
+      "token": "HS256-YOmbMB56EySpauJecQ0jZPaNASdmoqtnF3wNHGbyeKM"
+    },
+    {
       "name": "url_supplied_ignore_params",
       "signedUrl": "https://token-tester.b-cdn.net/300kb.jpg?token=HS256-q6oRQr-5ccQ-piO1HSEQu1DVMy9UMppRxGlIQwoeM5Y&v=123&expires=1598024587",
       "token": "HS256-q6oRQr-5ccQ-piO1HSEQu1DVMy9UMppRxGlIQwoeM5Y"

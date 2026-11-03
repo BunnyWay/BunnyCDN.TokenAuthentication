@@ -88,6 +88,24 @@ public class TokenSigner {
             Long expiresAt,
             int speedLimit
     ) {
+        return signUrl(url, securityKey, expirationTime, userIp, isDirectory, pathAllowed,
+                countriesAllowed, countriesBlocked, ignoreParams, expiresAt, speedLimit, "");
+    }
+
+    public static String signUrl(
+            String url,
+            String securityKey,
+            long expirationTime,
+            String userIp,
+            boolean isDirectory,
+            String pathAllowed,
+            String countriesAllowed,
+            String countriesBlocked,
+            boolean ignoreParams,
+            Long expiresAt,
+            int speedLimit,
+            String tokenReferer
+    ) {
         if (securityKey == null || securityKey.isEmpty()) {
             throw new IllegalArgumentException("securityKey must not be null or empty");
         }
@@ -97,6 +115,9 @@ public class TokenSigner {
 
         try {
             URI uri = new URI(url);
+            if (!uri.isAbsolute() || uri.getRawAuthority() == null) {
+                throw new IllegalArgumentException("URL must be absolute and include a host");
+            }
 
             TreeMap<String, String> queryParams = new TreeMap<>();
             String query = uri.getRawQuery();
@@ -120,13 +141,21 @@ public class TokenSigner {
                 }
             }
 
-            queryParams.remove("token_ignore_params");
+            for (String key : new String[] {"token", "expires", "token_path", "token_countries", "token_countries_blocked", "token_referer", "token_ignore_params", "limit"}) {
+                queryParams.remove(key);
+            }
+            if (isDirectory && !queryParams.isEmpty()) {
+                throw new IllegalArgumentException("Directory tokens do not support URL query parameters");
+            }
 
             if (countriesAllowed != null && !countriesAllowed.isEmpty()) {
                 queryParams.put("token_countries", countriesAllowed);
             }
             if (countriesBlocked != null && !countriesBlocked.isEmpty()) {
                 queryParams.put("token_countries_blocked", countriesBlocked);
+            }
+            if (tokenReferer != null && !tokenReferer.isEmpty()) {
+                queryParams.put("token_referer", tokenReferer);
             }
             if (speedLimit > 0) {
                 queryParams.put("limit", String.valueOf(speedLimit));
@@ -201,7 +230,7 @@ public class TokenSigner {
             String token = "HS256-" + flagsPrefix
                     + Base64.getUrlEncoder().withoutPadding().encodeToString(digest);
 
-            String base = uri.getScheme() + "://" + uri.getHost();
+            String base = uri.getScheme() + "://" + uri.getRawAuthority();
             String path = uri.getRawPath();
             String tail = urlData.length() == 0 ? "" : "&" + urlData;
 

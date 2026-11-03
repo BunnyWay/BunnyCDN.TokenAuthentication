@@ -16,7 +16,8 @@ function sign_bcdn_url(
     string $countries_blocked = '',
     bool $ignore_params = false,
     ?int $expires_at = null,
-    int $speed_limit = 0
+    int $speed_limit = 0,
+    string $token_referer = ''
 ): string {
     if ($security_key === '') {
         throw new InvalidArgumentException('security_key must not be empty');
@@ -26,6 +27,9 @@ function sign_bcdn_url(
     }
 
     $parsed = parse_url($url);
+    if ($parsed === false || !isset($parsed['scheme'], $parsed['host'])) {
+        throw new InvalidArgumentException('URL must be absolute and include a host');
+    }
     $url_scheme = $parsed['scheme'] ?? '';
     $url_host = $parsed['host'] ?? '';
     $url_path = $parsed['path'] ?? '/';
@@ -45,19 +49,22 @@ function sign_bcdn_url(
         }
     }
 
-    unset($query_params['token_ignore_params']);
+    foreach (['token', 'expires', 'token_path', 'token_countries', 'token_countries_blocked', 'token_referer', 'token_ignore_params', 'limit'] as $key) {
+        unset($query_params[$key]);
+    }
+
+    if ($is_directory && $query_params !== []) {
+        throw new InvalidArgumentException('Directory tokens do not support URL query parameters');
+    }
 
     if ($countries_allowed !== '') {
-        if (array_key_exists('token_countries', $query_params)) {
-            throw new InvalidArgumentException("Duplicate query parameter 'token_countries' is not supported");
-        }
         $query_params['token_countries'] = $countries_allowed;
     }
     if ($countries_blocked !== '') {
-        if (array_key_exists('token_countries_blocked', $query_params)) {
-            throw new InvalidArgumentException("Duplicate query parameter 'token_countries_blocked' is not supported");
-        }
         $query_params['token_countries_blocked'] = $countries_blocked;
+    }
+    if ($token_referer !== '') {
+        $query_params['token_referer'] = $token_referer;
     }
     if ($speed_limit > 0) {
         $query_params['limit'] = (string) $speed_limit;
@@ -104,6 +111,9 @@ function sign_bcdn_url(
     $token = 'HS256-' . $flags_prefix . rtrim(strtr(base64_encode($digest), '+/', '-_'), '=');
 
     $base = "{$url_scheme}://{$url_host}";
+    if (isset($parsed['port'])) {
+        $base .= ':' . $parsed['port'];
+    }
     $tail = $url_data !== '' ? "&{$url_data}" : '';
 
     if ($is_directory) {

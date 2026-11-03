@@ -50,6 +50,26 @@ pub fn sign_url(
     expires_at: Option<i64>,
     speed_limit: i64,
 ) -> Result<String, String> {
+    sign_url_with_referer(raw_url, security_key, expiration_time, user_ip, is_directory,
+        path_allowed, countries_allowed, countries_blocked, ignore_params, expires_at,
+        speed_limit, "")
+}
+
+/// Sign a URL with an optional referer domain.
+pub fn sign_url_with_referer(
+    raw_url: &str,
+    security_key: &str,
+    expiration_time: i64,
+    user_ip: &str,
+    is_directory: bool,
+    path_allowed: &str,
+    countries_allowed: &str,
+    countries_blocked: &str,
+    ignore_params: bool,
+    expires_at: Option<i64>,
+    speed_limit: i64,
+    token_referer: &str,
+) -> Result<String, String> {
     if security_key.is_empty() {
         return Err("security_key must not be empty".into());
     }
@@ -58,6 +78,9 @@ pub fn sign_url(
     }
 
     let parsed = Url::parse(raw_url).map_err(|e| format!("invalid URL: {e}"))?;
+    if !parsed.has_host() {
+        return Err("URL must be absolute and include a host".into());
+    }
 
     let mut query_params = BTreeMap::new();
     if let Some(query) = parsed.query() {
@@ -79,13 +102,21 @@ pub fn sign_url(
         }
     }
 
-    query_params.remove("token_ignore_params");
+    for key in ["token", "expires", "token_path", "token_countries", "token_countries_blocked", "token_referer", "token_ignore_params", "limit"] {
+        query_params.remove(key);
+    }
+    if is_directory && !query_params.is_empty() {
+        return Err("directory tokens do not support URL query parameters".into());
+    }
 
     if !countries_allowed.is_empty() {
         query_params.insert("token_countries".into(), countries_allowed.into());
     }
     if !countries_blocked.is_empty() {
         query_params.insert("token_countries_blocked".into(), countries_blocked.into());
+    }
+    if !token_referer.is_empty() {
+        query_params.insert("token_referer".into(), token_referer.into());
     }
     if speed_limit > 0 {
         query_params.insert("limit".into(), speed_limit.to_string());
@@ -152,7 +183,7 @@ pub fn sign_url(
     let digest = mac.finalize().into_bytes();
     let token = format!("HS256-{flags_prefix}{}", URL_SAFE_NO_PAD.encode(digest));
 
-    let base = format!("{}://{}", parsed.scheme(), parsed.host_str().unwrap_or(""));
+    let base = parsed.origin().ascii_serialization();
     let tail = if url_data.is_empty() {
         String::new()
     } else {
@@ -203,6 +234,35 @@ mod tests {
 
     const SECURITY_KEY: &str = "SecurityKey";
     const EXPIRES_AT: i64 = 1598024587;
+
+    #[test]
+    fn preserves_port() {
+        let result = sign_url(
+            "https://token-tester.b-cdn.net:8443/300kb.jpg",
+            SECURITY_KEY, 86400, "", false, "", "", "", false, Some(EXPIRES_AT), 0,
+        ).unwrap();
+        assert!(result.starts_with("https://token-tester.b-cdn.net:8443/300kb.jpg?token="));
+    }
+
+    #[test]
+    fn directory_token_rejects_query() {
+        for ignore_params in [false, true] {
+            let result = sign_url(
+                "https://example.com/f.jpg?v=123", SECURITY_KEY, 86400,
+                "", true, "", "", "", ignore_params, Some(EXPIRES_AT), 0,
+            );
+            assert!(result.is_err());
+        }
+    }
+
+    #[test]
+    fn hostless_url_rejected() {
+        let result = sign_url(
+            "mailto:example", SECURITY_KEY, 86400, "", false,
+            "", "", "", false, Some(EXPIRES_AT), 0,
+        );
+        assert!(result.is_err());
+    }
 
     #[test]
     fn with_countries_allowed() {

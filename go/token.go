@@ -48,6 +48,26 @@ func SignUrl(
 	expiresAt *int64,
 	speedLimit int64,
 ) (string, error) {
+	return SignUrlWithReferer(rawUrl, securityKey, expirationTime, userIp, isDirectory,
+		pathAllowed, countriesAllowed, countriesBlocked, ignoreParams, expiresAt,
+		speedLimit, "")
+}
+
+// SignUrlWithReferer signs a URL with an optional referer domain.
+func SignUrlWithReferer(
+	rawUrl string,
+	securityKey string,
+	expirationTime int64,
+	userIp string,
+	isDirectory bool,
+	pathAllowed string,
+	countriesAllowed string,
+	countriesBlocked string,
+	ignoreParams bool,
+	expiresAt *int64,
+	speedLimit int64,
+	tokenReferer string,
+) (string, error) {
 	if securityKey == "" {
 		return "", errors.New("securityKey must not be empty")
 	}
@@ -58,6 +78,9 @@ func SignUrl(
 	parsed, err := url.Parse(rawUrl)
 	if err != nil {
 		return "", fmt.Errorf("invalid URL: %w", err)
+	}
+	if !parsed.IsAbs() || parsed.Host == "" {
+		return "", errors.New("URL must be absolute and include a host")
 	}
 
 	queryParams := make(map[string]string)
@@ -91,13 +114,21 @@ func SignUrl(
 		}
 	}
 
-	delete(queryParams, "token_ignore_params")
+	for _, key := range []string{"token", "expires", "token_path", "token_countries", "token_countries_blocked", "token_referer", "token_ignore_params", "limit"} {
+		delete(queryParams, key)
+	}
+	if isDirectory && len(queryParams) > 0 {
+		return "", errors.New("directory tokens do not support URL query parameters")
+	}
 
 	if countriesAllowed != "" {
 		queryParams["token_countries"] = countriesAllowed
 	}
 	if countriesBlocked != "" {
 		queryParams["token_countries_blocked"] = countriesBlocked
+	}
+	if tokenReferer != "" {
+		queryParams["token_referer"] = tokenReferer
 	}
 	if speedLimit > 0 {
 		queryParams["limit"] = fmt.Sprintf("%d", speedLimit)

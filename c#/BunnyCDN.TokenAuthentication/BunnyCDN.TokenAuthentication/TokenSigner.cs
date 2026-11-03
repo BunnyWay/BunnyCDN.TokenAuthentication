@@ -31,12 +31,18 @@ namespace BunnyCDN.TokenAuthentication
 
             var queryParams = ParseQueryString(uri.Query);
 
-            queryParams.Remove("token_ignore_params");
+            foreach (var key in new[] { "token", "expires", "token_path", "token_countries", "token_countries_blocked", "token_referer", "token_ignore_params", "limit" })
+                queryParams.Remove(key);
+
+            if (config.IsDirectory && queryParams.Count > 0)
+                throw new ArgumentException("Directory tokens do not support URL query parameters.", nameof(config));
 
             if (config.CountriesAllowed.Any())
                 queryParams["token_countries"] = string.Join(",", config.CountriesAllowed).ToUpperInvariant();
             if (config.CountriesBlocked.Any())
                 queryParams["token_countries_blocked"] = string.Join(",", config.CountriesBlocked).ToUpperInvariant();
+            if (!string.IsNullOrEmpty(config.TokenReferer))
+                queryParams["token_referer"] = config.TokenReferer;
             if (config.SpeedLimit > 0)
                 queryParams["limit"] = config.SpeedLimit.ToString();
 

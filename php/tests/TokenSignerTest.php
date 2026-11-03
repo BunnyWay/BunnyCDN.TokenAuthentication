@@ -9,6 +9,35 @@ class TokenSignerTest extends TestCase
     private const SECURITY_KEY = 'SecurityKey';
     private const EXPIRES_AT = 1598024587;
 
+    public function testPreservesPort(): void
+    {
+        $result = sign_bcdn_url(
+            'https://token-tester.b-cdn.net:8443/300kb.jpg',
+            self::SECURITY_KEY, 86400, '', false, '', '', '', false,
+            self::EXPIRES_AT
+        );
+
+        $this->assertStringStartsWith(
+            'https://token-tester.b-cdn.net:8443/300kb.jpg?token=',
+            $result
+        );
+    }
+
+    public function testDirectoryTokenRejectsQuery(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        sign_bcdn_url(
+            'https://example.com/f.jpg?v=123', self::SECURITY_KEY,
+            86400, '', true, '', '', '', true, self::EXPIRES_AT
+        );
+    }
+
+    public function testRelativeUrlThrows(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        sign_bcdn_url('/f.jpg', self::SECURITY_KEY);
+    }
+
     public function testWithCountriesAllowed(): void
     {
         $result = sign_bcdn_url(

@@ -45,7 +45,8 @@ def build():
             user_ip=c["userIp"], is_directory=c["isDirectory"],
             path_allowed=c["pathAllowed"], countries_allowed=c["countriesAllowed"],
             countries_blocked=c["countriesBlocked"], ignore_params=c["ignoreParams"],
-            expires_at=expires, speed_limit=c["speedLimit"])
+            expires_at=expires, speed_limit=c["speedLimit"],
+            token_referer=c.get("tokenReferer", ""))
         vectors.append({
             "name": c["name"],
             "signedUrl": signed,
