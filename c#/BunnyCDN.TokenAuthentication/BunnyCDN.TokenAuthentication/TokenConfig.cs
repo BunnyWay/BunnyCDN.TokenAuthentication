@@ -49,6 +49,8 @@ namespace BunnyCDN.TokenAuthentication
         /// </summary>
         public IEnumerable<string> CountriesBlocked { get; set; } = new List<string>();
 
+        public string TokenReferer { get; set; } = "";
+
         /// <summary>
         /// If true, query parameters are excluded from token validation.
         /// </summary>

@@ -9,6 +9,35 @@ class TokenSignerTest extends TestCase
     private const SECURITY_KEY = 'SecurityKey';
     private const EXPIRES_AT = 1598024587;
 
+    public function testPreservesPort(): void
+    {
+        $result = sign_bcdn_url(
+            'https://token-tester.b-cdn.net:8443/300kb.jpg',
+            self::SECURITY_KEY, 86400, '', false, '', '', '', false,
+            self::EXPIRES_AT
+        );
+
+        $this->assertStringStartsWith(
+            'https://token-tester.b-cdn.net:8443/300kb.jpg?token=',
+            $result
+        );
+    }
+
+    public function testDirectoryTokenRejectsQuery(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        sign_bcdn_url(
+            'https://example.com/f.jpg?v=123', self::SECURITY_KEY,
+            86400, '', true, '', '', '', true, self::EXPIRES_AT
+        );
+    }
+
+    public function testRelativeUrlThrows(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        sign_bcdn_url('/f.jpg', self::SECURITY_KEY);
+    }
+
     public function testWithCountriesAllowed(): void
     {
         $result = sign_bcdn_url(
@@ -150,6 +179,20 @@ class TokenSignerTest extends TestCase
         );
     }
 
+    public function testUrlSuppliedIgnoreParamsIsStripped(): void
+    {
+        $result = sign_bcdn_url(
+            'https://token-tester.b-cdn.net/300kb.jpg?v=123&token_ignore_params=true',
+            self::SECURITY_KEY, 86400, '', false, '', '', '', false,
+            self::EXPIRES_AT
+        );
+
+        $this->assertSame(
+            'https://token-tester.b-cdn.net/300kb.jpg?token=HS256-q6oRQr-5ccQ-piO1HSEQu1DVMy9UMppRxGlIQwoeM5Y&v=123&expires=1598024587',
+            $result
+        );
+    }
+
     public function testWithExistingQueryParams(): void
     {
         $result = sign_bcdn_url(
@@ -192,16 +235,16 @@ class TokenSignerTest extends TestCase
         );
     }
 
-    public function testCombinedSpeedLimitIPDirectory(): void
+    public function testCombinedSpeedLimitIP(): void
     {
         $result = sign_bcdn_url(
-            'https://token-tester.b-cdn.net/abc/',
-            self::SECURITY_KEY, 86400, '1.2.3.4', true, '', '', '', false,
+            'https://token-tester.b-cdn.net/300kb.jpg',
+            self::SECURITY_KEY, 86400, '1.2.3.4', false, '', '', '', false,
             self::EXPIRES_AT, 5000
         );
 
         $this->assertSame(
-            'https://token-tester.b-cdn.net/bcdn_token=HS256-1-X01Z6A9xAo1_ds1XFf9y8gAIzk_JpmoevOx7EtgMQhY&limit=5000&expires=1598024587/abc/',
+            'https://token-tester.b-cdn.net/300kb.jpg?token=HS256-1-TqP_CwcmkckrVnJz5x0e9rs5czOZjI-3UgbJQ_7O_I8&limit=5000&expires=1598024587',
             $result
         );
     }

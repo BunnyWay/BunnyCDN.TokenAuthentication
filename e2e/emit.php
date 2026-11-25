@@ -32,7 +32,8 @@ foreach ($cases as $c) {
         $c['countriesBlocked'],
         $c['ignoreParams'],
         $expires,
-        $c['speedLimit']
+        $c['speedLimit'],
+        $c['tokenReferer'] ?? ''
     );
     $result[$c['name']] = extract_token($signedUrl);
 }

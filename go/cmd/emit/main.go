@@ -24,6 +24,7 @@ type inputs struct {
 		PathAllowed      string `json:"pathAllowed"`
 		CountriesAllowed string `json:"countriesAllowed"`
 		CountriesBlocked string `json:"countriesBlocked"`
+		TokenReferer     string `json:"tokenReferer"`
 		IgnoreParams     bool   `json:"ignoreParams"`
 		SpeedLimit       int64  `json:"speedLimit"`
 		CountryCode      string `json:"countryCode"`
@@ -70,7 +71,7 @@ func main() {
 	expires := in.Expires
 	out := make(map[string]string, len(in.Cases))
 	for _, c := range in.Cases {
-		signedUrl, err := bunnycdn.SignUrl(
+		signedUrl, err := bunnycdn.SignUrlWithReferer(
 			in.Host+c.Path,
 			in.Key,
 			86400,
@@ -82,6 +83,7 @@ func main() {
 			c.IgnoreParams,
 			&expires,
 			c.SpeedLimit,
+			c.TokenReferer,
 		)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "sign case %q: %v\n", c.Name, err)

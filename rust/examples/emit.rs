@@ -9,7 +9,7 @@
 
 use std::collections::BTreeMap;
 
-use bunnycdn_token_authentication::sign_url;
+use bunnycdn_token_authentication::sign_url_with_referer;
 use serde::Deserialize;
 
 #[derive(Deserialize)]
@@ -34,6 +34,8 @@ struct Case {
     countries_allowed: String,
     #[serde(rename = "countriesBlocked")]
     countries_blocked: String,
+    #[serde(rename = "tokenReferer", default)]
+    token_referer: String,
     #[serde(rename = "ignoreParams")]
     ignore_params: bool,
     #[serde(rename = "speedLimit")]
@@ -68,7 +70,7 @@ fn main() {
 
     for case in &inputs.cases {
         let url = format!("{}{}", inputs.host, case.path);
-        let signed = sign_url(
+        let signed = sign_url_with_referer(
             &url,
             &inputs.key,
             86400,
@@ -80,6 +82,7 @@ fn main() {
             case.ignore_params,
             Some(inputs.expires),
             case.speed_limit,
+            &case.token_referer,
         )
         .unwrap_or_else(|e| panic!("sign_url failed for case '{}': {e}", case.name));
 

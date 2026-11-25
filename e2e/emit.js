@@ -29,6 +29,7 @@ for (const c of cases) {
         c.ignoreParams,
         expires,
         c.speedLimit,
+        c.tokenReferer || '',
     );
     result[c.name] = extractToken(signedUrl);
 }

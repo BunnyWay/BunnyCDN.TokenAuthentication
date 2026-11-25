@@ -42,9 +42,18 @@ Where `signingData` is the alphabetically-sorted query parameters joined as `key
 | `pathAllowed` | Restrict the token scope to a specific path |
 | `countriesAllowed` | Comma-separated allow-list of country codes (e.g. `CA,US`) |
 | `countriesBlocked` | Comma-separated block-list of country codes |
-| `ignoreParams` | Exclude query parameters from token validation |
+| `ignoreParams` | Ignore ordinary query parameters while signing supported token controls |
 | `expiresAt` | Absolute Unix timestamp for expiration. Overrides `expirationTime` when set. In C# this is a `DateTimeOffset` property on `TokenConfig`. |
 | `speedLimit` | Download speed limit in kB/s (0 = no limit). Maps to the `limit` query parameter. |
+| `tokenReferer` | Signed referer domain. The current edge accepts requests without a `Referer` header. |
+
+The signer controls `token`, `expires`, `token_path`, `token_countries`, `token_countries_blocked`, `token_referer`, `token_ignore_params`, and `limit`. Values for these fields in the input URL are discarded; use signer options to set them.
+
+Go uses `SignUrlWithReferer` and Rust uses `sign_url_with_referer` when setting `tokenReferer`; their existing signing functions remain available.
+
+Directory-style tokens reject ordinary query parameters in the input URL. The current edge does not reliably validate or forward them in that URL form; use a query-string token for URLs with query parameters.
+
+`pathAllowed` is matched as a prefix by the edge. Use a trailing slash when limiting access to a directory so a sibling path with the same leading characters is excluded.
 
 ## Quick start
 

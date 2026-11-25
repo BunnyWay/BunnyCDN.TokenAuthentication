@@ -16,6 +16,11 @@ namespace BunnyCDN.TokenAuthentication
     /// </summary>
     public static class TokenSigner
     {
+        private static readonly HashSet<string> SignedTokenParams = new HashSet<string>(StringComparer.Ordinal)
+        {
+            "token_path", "token_countries", "token_countries_blocked", "token_referer",
+        };
+
         public static string SignUrl(Action<TokenConfig> configFunc)
         {
             var config = new TokenConfig();
@@ -26,10 +31,18 @@ namespace BunnyCDN.TokenAuthentication
 
             var queryParams = ParseQueryString(uri.Query);
 
+            foreach (var key in new[] { "token", "expires", "token_path", "token_countries", "token_countries_blocked", "token_referer", "token_ignore_params", "limit" })
+                queryParams.Remove(key);
+
+            if (config.IsDirectory && queryParams.Count > 0)
+                throw new ArgumentException("Directory tokens do not support URL query parameters.", nameof(config));
+
             if (config.CountriesAllowed.Any())
                 queryParams["token_countries"] = string.Join(",", config.CountriesAllowed).ToUpperInvariant();
             if (config.CountriesBlocked.Any())
                 queryParams["token_countries_blocked"] = string.Join(",", config.CountriesBlocked).ToUpperInvariant();
+            if (!string.IsNullOrEmpty(config.TokenReferer))
+                queryParams["token_referer"] = config.TokenReferer;
             if (config.SpeedLimit > 0)
                 queryParams["limit"] = config.SpeedLimit.ToString();
 
@@ -129,15 +142,14 @@ namespace BunnyCDN.TokenAuthentication
         {
             var result = new SortedDictionary<string, string>(StringComparer.Ordinal);
 
-            if (ignoreParams)
+            foreach (var kv in queryParams)
             {
-                result["token_ignore_params"] = "true";
-            }
-            else
-            {
-                foreach (var kv in queryParams)
+                if (!ignoreParams || SignedTokenParams.Contains(kv.Key))
                     result[kv.Key] = kv.Value;
             }
+
+            if (ignoreParams)
+                result["token_ignore_params"] = "true";
 
             if (!string.IsNullOrEmpty(tokenPath))
                 result["token_path"] = tokenPath;

@@ -1,6 +1,11 @@
 const crypto = require('crypto');
 const net = require('net');
 
+const SIGNED_TOKEN_PARAMS = new Set([
+    'token_path', 'token_countries', 'token_countries_blocked',
+    'token_referer',
+]);
+
 function userIpToBytes(userIp) {
     const family = net.isIP(userIp);
     if (family === 4) {
@@ -90,6 +95,7 @@ function parseIpv6(str) {
  * @param {string} pathAllowed       Optional path override for the signature scope
  * @param {string} countriesAllowed  Comma-separated allow-list (e.g. "CA,US,TH")
  * @param {string} countriesBlocked  Comma-separated block-list
+ * @param {string} tokenReferer       Signed referer domain
  * @param {boolean} ignoreParams     If true, query params are excluded from validation
  * @param {number|null} expiresAt    Optional fixed expiry timestamp (unix seconds)
  * @returns {string} The signed URL
@@ -106,6 +112,7 @@ function signUrl(
     ignoreParams = false,
     expiresAt = null,
     speedLimit = 0,
+    tokenReferer = '',
 ) {
     if (!securityKey) {
         throw new Error('securityKey must not be empty');
@@ -124,11 +131,22 @@ function signUrl(
         queryParams[key] = value;
     }
 
+    for (const key of ['token', 'expires', 'token_path', 'token_countries', 'token_countries_blocked', 'token_referer', 'token_ignore_params', 'limit']) {
+        delete queryParams[key];
+    }
+
+    if (isDirectory && Object.keys(queryParams).length > 0) {
+        throw new Error('Directory tokens do not support URL query parameters');
+    }
+
     if (countriesAllowed) {
         queryParams['token_countries'] = countriesAllowed;
     }
     if (countriesBlocked) {
         queryParams['token_countries_blocked'] = countriesBlocked;
+    }
+    if (tokenReferer) {
+        queryParams['token_referer'] = tokenReferer;
     }
     if (speedLimit > 0) {
         queryParams['limit'] = String(speedLimit);
@@ -138,11 +156,14 @@ function signUrl(
         ? String(expiresAt)
         : String(Math.floor(Date.now() / 1000) + expirationTime);
 
-    let parameters;
+    const parameters = {};
+    for (const [key, value] of Object.entries(queryParams)) {
+        if (!ignoreParams || SIGNED_TOKEN_PARAMS.has(key)) {
+            parameters[key] = value;
+        }
+    }
     if (ignoreParams) {
-        parameters = { token_ignore_params: 'true' };
-    } else {
-        parameters = Object.assign({}, queryParams);
+        parameters['token_ignore_params'] = 'true';
     }
     if (pathAllowed) {
         parameters['token_path'] = pathAllowed;

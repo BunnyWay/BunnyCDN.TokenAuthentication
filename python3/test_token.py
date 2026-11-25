@@ -157,6 +157,76 @@ def test_with_ignore_params():
     )
 
 
+def test_url_supplied_ignore_params_is_stripped():
+    result = sign_url(
+        "https://token-tester.b-cdn.net/300kb.jpg?v=123&token_ignore_params=true",
+        SECURITY_KEY,
+        is_directory=False,
+        expires_at=EXPIRES_AT,
+    )
+    assert result == (
+        "https://token-tester.b-cdn.net/300kb.jpg"
+        "?token=HS256-q6oRQr-5ccQ-piO1HSEQu1DVMy9UMppRxGlIQwoeM5Y"
+        "&v=123&expires=1598024587"
+    )
+
+
+def test_url_supplied_signer_params_are_stripped():
+    base = "https://token-tester.b-cdn.net/abc/300kb.jpg?v=123"
+    supplied = (
+        base + "&token=old&expires=1&token_path=%2Fabc"
+        "&token_countries=ZZ&token_countries_blocked=US&token_referer=wrong.example"
+        "&token_ignore_params=true&limit=1"
+    )
+    for ignore_params in (False, True):
+        options = dict(is_directory=False, expires_at=EXPIRES_AT,
+                       ignore_params=ignore_params)
+        assert sign_url(supplied, SECURITY_KEY, **options) == sign_url(
+            base, SECURITY_KEY, **options
+        )
+
+
+def test_options_override_url_supplied_signer_params():
+    base = "https://token-tester.b-cdn.net/abc/300kb.jpg?v=123"
+    supplied = (
+        base + "&token_path=%2Fwrong&token_countries=ZZ"
+        "&token_countries_blocked=US&token_referer=wrong.example&limit=1"
+    )
+    for ignore_params in (False, True):
+        options = dict(is_directory=False, expires_at=EXPIRES_AT,
+                       ignore_params=ignore_params, path_allowed="/abc",
+                       countries_allowed="CA", countries_blocked="RU",
+                       speed_limit=1000, token_referer="example.com")
+        assert sign_url(supplied, SECURITY_KEY, **options) == sign_url(
+            base, SECURITY_KEY, **options
+        )
+
+
+def test_directory_token_rejects_ordinary_query():
+    for ignore_params in (False, True):
+        with pytest.raises(ValueError, match="Directory tokens"):
+            sign_url(
+                "https://token-tester.b-cdn.net/300kb.jpg?v=123",
+                SECURITY_KEY, is_directory=True, ignore_params=ignore_params,
+                expires_at=EXPIRES_AT,
+            )
+
+
+def test_duplicate_query_key_rejected_even_when_ignored():
+    with pytest.raises(ValueError, match="Multi-valued query parameter"):
+        sign_url(
+            "https://token-tester.b-cdn.net/300kb.jpg?v=1&v=2",
+            SECURITY_KEY, is_directory=False, ignore_params=True,
+            expires_at=EXPIRES_AT,
+        )
+
+
+def test_relative_url_rejected():
+    with pytest.raises(ValueError, match="absolute"):
+        sign_url("/f.jpg", SECURITY_KEY, is_directory=False,
+                 expires_at=EXPIRES_AT)
+
+
 def test_with_existing_query_params():
     result = sign_url(
         "https://token-tester.b-cdn.net/300kb.jpg?v=123",
@@ -199,18 +269,18 @@ def test_with_speed_limit():
     )
 
 
-def test_combined_speed_limit_ip_directory():
+def test_combined_speed_limit_ip():
     result = sign_url(
-        "https://token-tester.b-cdn.net/abc/",
+        "https://token-tester.b-cdn.net/300kb.jpg",
         SECURITY_KEY,
-        user_ip="1.2.3.4", is_directory=True,
+        user_ip="1.2.3.4", is_directory=False,
         expires_at=EXPIRES_AT,
         speed_limit=5000,
     )
     assert result == (
-        "https://token-tester.b-cdn.net/"
-        "bcdn_token=HS256-1-X01Z6A9xAo1_ds1XFf9y8gAIzk_JpmoevOx7EtgMQhY"
-        "&limit=5000&expires=1598024587/abc/"
+        "https://token-tester.b-cdn.net/300kb.jpg"
+        "?token=HS256-1-TqP_CwcmkckrVnJz5x0e9rs5czOZjI-3UgbJQ_7O_I8"
+        "&limit=5000&expires=1598024587"
     )
 
 

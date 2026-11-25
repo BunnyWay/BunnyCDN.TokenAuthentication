@@ -16,23 +16,31 @@ def _b64url_no_pad(raw: bytes) -> str:
     return base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
 
 
+_SIGNED_TOKEN_PARAMS = frozenset({
+    "token_path", "token_countries", "token_countries_blocked",
+    "token_referer",
+})
+
+
 def _build_parameters(
     parsed_query: str,
     *,
     ignore_params: bool,
     path_allowed: str,
 ) -> Dict[str, str]:
+    raw = urllib.parse.parse_qs(parsed_query, keep_blank_values=True)
+    params: Dict[str, str] = {}
+    for key, values in raw.items():
+        if ignore_params and key not in _SIGNED_TOKEN_PARAMS:
+            continue
+        if len(values) > 1:
+            raise ValueError(
+                f"Multi-valued query parameter {key!r} is not supported"
+            )
+        params[key] = values[0]
+
     if ignore_params:
-        params: Dict[str, str] = {"token_ignore_params": "true"}
-    else:
-        raw = urllib.parse.parse_qs(parsed_query, keep_blank_values=True)
-        params = {}
-        for key, values in raw.items():
-            if len(values) > 1:
-                raise ValueError(
-                    f"Multi-valued query parameter {key!r} is not supported"
-                )
-            params[key] = values[0]
+        params["token_ignore_params"] = "true"
 
     if path_allowed:
         params["token_path"] = path_allowed
@@ -52,6 +60,7 @@ def sign_url(
     ignore_params: bool = False,
     expires_at: Optional[int] = None,
     speed_limit: int = 0,
+    token_referer: str = "",
 ) -> str:
     """
     Generate a signed BunnyCDN URL.
@@ -68,6 +77,7 @@ def sign_url(
                            False → token in query string   (?token=...)
         path_allowed:      Optional path override for the signature scope.
         countries_allowed: Comma-separated allow-list (e.g. "CA,US,TH").
+        token_referer:      Optional signed referer domain.
         countries_blocked: Comma-separated block-list.
         ignore_params:     If True, query params are excluded from validation.
         expires_at:        Absolute Unix timestamp for expiration. When set,
@@ -84,12 +94,27 @@ def sign_url(
         raise ValueError("expiration_time must be non-negative")
 
     parsed = urllib.parse.urlparse(url)
+    if not parsed.scheme or not parsed.netloc:
+        raise ValueError("URL must be absolute and include a host")
     query_params = urllib.parse.parse_qs(parsed.query, keep_blank_values=True)
+
+    for key, values in query_params.items():
+        if len(values) > 1:
+            raise ValueError(f"Multi-valued query parameter {key!r} is not supported")
+
+    for key in ("token", "expires", "token_path", "token_countries",
+                "token_countries_blocked", "token_referer", "token_ignore_params", "limit"):
+        query_params.pop(key, None)
+
+    if is_directory and query_params:
+        raise ValueError("Directory tokens do not support URL query parameters")
 
     if countries_allowed:
         query_params["token_countries"] = [countries_allowed]
     if countries_blocked:
         query_params["token_countries_blocked"] = [countries_blocked]
+    if token_referer:
+        query_params["token_referer"] = [token_referer]
     if speed_limit > 0:
         query_params["limit"] = [str(speed_limit)]
 
