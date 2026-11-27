@@ -168,9 +168,10 @@ function signUrl(
     if (pathAllowed) {
         parameters['token_path'] = pathAllowed;
     }
-    // Parameters are folded into the signature sorted by key; signingData uses raw
+    // Parameters are folded into the signature sorted by key in code-unit order, giving
+    // ASCII keys a locale-independent order (not localeCompare); signingData uses raw
     // values, urlData uses URL-encoded values.
-    const sortedEntries = Object.entries(parameters).sort(([a], [b]) => a.localeCompare(b));
+    const sortedEntries = Object.entries(parameters).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
 
     const signaturePath = pathAllowed || parsed.pathname;
 

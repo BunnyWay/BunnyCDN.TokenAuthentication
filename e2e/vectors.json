@@ -115,6 +115,11 @@
       "name": "url_supplied_ignore_params",
       "signedUrl": "https://token-tester.b-cdn.net/300kb.jpg?token=HS256-q6oRQr-5ccQ-piO1HSEQu1DVMy9UMppRxGlIQwoeM5Y&v=123&expires=1598024587",
       "token": "HS256-q6oRQr-5ccQ-piO1HSEQu1DVMy9UMppRxGlIQwoeM5Y"
+    },
+    {
+      "name": "query_mixed_case",
+      "signedUrl": "https://token-tester.b-cdn.net/300kb.jpg?token=HS256-5WTUJKPUij6w1TtdgB22Emzyayu-yrAtDAuBzHEFG5Y&Z=2&a=1&expires=1598024587",
+      "token": "HS256-5WTUJKPUij6w1TtdgB22Emzyayu-yrAtDAuBzHEFG5Y"
     }
   ]
 }
