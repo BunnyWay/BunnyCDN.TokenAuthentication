@@ -25,6 +25,7 @@
     { "name": "url_owned_ignore", "path": "/abc/300kb.jpg?v=123&token=old&expires=1&token_path=%2Fwrong&token_countries=ZZ&token_countries_blocked=US&token_referer=wrong.example&token_ignore_params=true&limit=1", "userIp": "", "isDirectory": false, "pathAllowed": "/abc", "countriesAllowed": "CA", "countriesBlocked": "RU", "tokenReferer": "example.com", "ignoreParams": true, "speedLimit": 0, "countryCode": "CA" },
     { "name": "referer_only", "path": "/300kb.jpg", "userIp": "", "isDirectory": false, "pathAllowed": "", "countriesAllowed": "", "countriesBlocked": "", "tokenReferer": "example.com", "ignoreParams": false, "speedLimit": 0, "countryCode": "US" },
     { "name": "url_owned_encoded", "path": "/300kb.jpg?v=123&%74oken_referer=wrong.example&token_%70ath=%2Fwrong&%6Cimit=1", "userIp": "", "isDirectory": false, "pathAllowed": "/", "countriesAllowed": "", "countriesBlocked": "", "tokenReferer": "example.com", "ignoreParams": true, "speedLimit": 0, "countryCode": "US" },
-    { "name": "url_supplied_ignore_params", "path": "/300kb.jpg?v=123&token_ignore_params=true", "userIp": "", "isDirectory": false, "pathAllowed": "", "countriesAllowed": "", "countriesBlocked": "", "ignoreParams": false, "speedLimit": 0, "countryCode": "US" }
+    { "name": "url_supplied_ignore_params", "path": "/300kb.jpg?v=123&token_ignore_params=true", "userIp": "", "isDirectory": false, "pathAllowed": "", "countriesAllowed": "", "countriesBlocked": "", "ignoreParams": false, "speedLimit": 0, "countryCode": "US" },
+    { "name": "query_mixed_case", "path": "/300kb.jpg?a=1&Z=2", "userIp": "", "isDirectory": false, "pathAllowed": "", "countriesAllowed": "", "countriesBlocked": "", "ignoreParams": false, "speedLimit": 0, "countryCode": "US" }
   ]
 }

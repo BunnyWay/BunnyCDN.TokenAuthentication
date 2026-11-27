@@ -157,6 +157,16 @@ describe('signUrl', () => {
         }
     });
 
+    it('sorts query parameters by code unit, not locale', () => {
+        // 'Z' (0x5A) sorts before 'a' (0x61), as in every other signer.
+        const result = signUrl(
+            'https://token-tester.b-cdn.net/300kb.jpg?a=1&Z=2',
+            SECURITY_KEY, 86400, '', false, '', '', '', false, EXPIRES_AT,
+        );
+        assert.equal(result,
+            'https://token-tester.b-cdn.net/300kb.jpg?token=HS256-5WTUJKPUij6w1TtdgB22Emzyayu-yrAtDAuBzHEFG5Y&Z=2&a=1&expires=1598024587');
+    });
+
     it('throws on negative expirationTime', () => {
         assert.throws(() => signUrl('https://example.com/f.jpg', 'key', -1), /expirationTime/);
     });
