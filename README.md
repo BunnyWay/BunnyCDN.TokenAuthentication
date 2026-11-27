@@ -19,16 +19,23 @@ URL token authentication for [bunny.net](https://bunny.net). Generates signed UR
 Tokens are HMAC-SHA256 signatures encoded as base64url (no padding) with an `HS256-` prefix:
 
 ```
-HS256-<base64url(HMAC-SHA256(key, message))>
+HS256-<flags><base64url(HMAC-SHA256(key, message))>
 ```
+
+`flags` is `1-` when a non-empty `userIp` is signed, and empty otherwise.
 
 The signing message is constructed as:
 
 ```
-{signaturePath}{expires}{signingData}{userIp}
+{signaturePath}{expires}{userIpBytes}{signingData}
 ```
 
-Where `signingData` is the alphabetically-sorted query parameters joined as `key=value` pairs separated by `&`.
+Where:
+
+- `signaturePath` is the URL path used by the signer, or a non-empty `pathAllowed` override (`TokenPath` in C#).
+- `expires` is the expiration Unix timestamp in seconds, written as decimal text.
+- `userIpBytes` is the raw binary address used by the signer, not the address text. Four-byte addresses are signed unchanged; sixteen-byte addresses keep their full length with the last eight bytes zeroed (`/64` masking). This segment is omitted when no IP is supplied.
+- `signingData` contains the signing parameters sorted by key and joined as `key=value` pairs separated by `&`, using their parsed or generated values without additional URL encoding. It excludes `token` and `expires`, and includes generated token controls and `limit` when applicable. When `ignoreParams` is enabled, it contains only `token_path`, `token_countries`, `token_countries_blocked` and `token_referer` when set, together with `token_ignore_params=true`.
 
 ## Parameters
 
